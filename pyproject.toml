@@ -1,5 +1,5 @@
 [project]
-name = "ai-agent"
+name = "Discoin"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -10,3 +10,6 @@ dependencies = [
     "mistralai>=1.4.0",
     "python-dotenv>=1.0.1",
 ]
+
+[tool.setuptools]
+py-modules = []

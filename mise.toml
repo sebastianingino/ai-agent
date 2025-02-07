@@ -1,0 +1,12 @@
+[tools]
+python = "latest"
+
+[env]
+'_'.python.venv = ".venv"
+
+[tasks.setup]
+run = "python -m venv .venv"
+depends_post= ["build"]
+
+[tasks.build]
+run = "python -m pip install -e ."
