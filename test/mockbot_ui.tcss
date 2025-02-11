@@ -1,0 +1,9 @@
+Markdown {
+  padding: 1 2;
+  margin: 1 0;
+}
+
+Markdown * {
+    content-align-horizontal: left !important;
+    margin: 0;
+}

@@ -3,6 +3,7 @@ import discord
 import logging
 
 from discord.ext import commands
+from test.mockbot import MockBot
 from dotenv import load_dotenv
 from agent import MistralAgent
 
@@ -17,7 +18,12 @@ load_dotenv()
 # Create the bot with all intents
 # The message content and members intent must be enabled in the Discord Developer Portal for the bot to work.
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix=PREFIX, intents=intents)
+
+environment = os.getenv("ENVIRONMENT")
+if environment == "PROD":
+    bot = commands.Bot(command_prefix=PREFIX, intents=intents)
+elif environment == "DEV":
+    bot = MockBot(command_prefix=PREFIX, intents=intents) # type: ignore
 
 # Import the Mistral agent from the agent.py file
 agent = MistralAgent()
@@ -76,4 +82,4 @@ async def ping(ctx, *, arg=None):
 
 
 # Start the bot, connecting it to the gateway
-bot.run(token)
+bot.run(token)  # type: ignore
