@@ -6,6 +6,7 @@ from discord.ext import commands
 from test.mockbot import MockBot
 from dotenv import load_dotenv
 from agent import MistralAgent
+import src.commands as bot_commands
 
 PREFIX = "!"
 
@@ -69,6 +70,7 @@ async def on_message(message: discord.Message):
 
 
 # Commands
+bot_commands.register(bot)
 
 
 # This example command is here to show you how to add commands to the bot.
@@ -80,7 +82,6 @@ async def ping(ctx, *, arg=None):
         await ctx.send("Pong!")
     else:
         await ctx.send(f"Pong! Your argument was {arg}")
-
 
 # Start the bot, connecting it to the gateway
 bot.run(token)  # type: ignore

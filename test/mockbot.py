@@ -79,6 +79,9 @@ class MockBot:
             self.commands[name or coro.__name__] = coro
 
         return decorator
+    
+    def add_command(self, command: discord.ext.commands.Command):
+        self.commands[command.name] = command.callback
 
     async def ui_handler(self, event: Any):
         if isinstance(event, MockBotUI.OnReady):
@@ -110,11 +113,12 @@ class MockBot:
 
     async def process_commands(self, message: discord.Message):
         if message.content.startswith(self.command_prefix):
-            command = message.content[len(self.command_prefix) :]
+            command = message.content[len(self.command_prefix) :].split(" ")[0].lower()
             if command in self.commands:
                 message_content = message.content.lstrip(self.command_prefix + command).strip()
                 arg = message_content if message_content and len(message_content) > 0 else None
-                await self.commands[command](self.channel, arg=arg)
+                arg_tuple = arg.split(" ") if arg else []
+                await self.commands[command](self.channel, *arg_tuple)
 
     def run(self, token: str):
         self.app.register_handler(self.ui_handler)
