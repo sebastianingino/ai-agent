@@ -11,10 +11,11 @@ from textual.widgets import (
     Markdown,
     Input,
     RichLog,
+    Label,
 )
-from textual.containers import VerticalScroll, VerticalGroup
+from textual.containers import VerticalScroll, VerticalGroup, Vertical
 from textual.binding import Binding
-from textual import on
+from textual import on, events
 from typing import Any, Callable, Coroutine, List, Optional
 from textual._context import active_app
 
@@ -34,6 +35,7 @@ class CustomHandler(logging.Handler):
 logging.root.addHandler(CustomHandler())
 logging.root.setLevel(logging.DEBUG)
 
+
 class MockBotUI(App):
     CSS_PATH = "mockbot_ui.tcss"
 
@@ -45,7 +47,7 @@ class MockBotUI(App):
         Binding("ctrl+c", "quit", "Quit", show=False),
     ]
 
-    messages: List[Markdown]
+    messages: List[Any]
 
     handler: Optional[Callable[[Any], Coroutine[Any, Any, Any]]]
 
@@ -76,6 +78,7 @@ class MockBotUI(App):
         if len(self.messages) > 0:
             chat.mount(self.messages[-1])
         await self.handler(self.OnReady())
+        self.query_one(Input).focus()
 
     class OnReady:
         pass
@@ -90,29 +93,48 @@ class MockBotUI(App):
             logging.CRITICAL: "red",
         }
         color = colors.get(record.levelno, "white")
-        log.write(f"[{color}]{record.levelname} [[{time.strftime('%H:%M:%S')}]][/{color}] [white]({record.name})[/white]")
+        log.write(
+            f"[{color}]{record.levelname} [[{time.strftime('%H:%M:%S')}]][/{color}] [white]({record.name})[/white]"
+        )
         log.write(f"[light_gray]{record.getMessage()}[/light_gray]")
 
     @on(Input.Submitted)
     async def input_submitted(self, event: Input.Submitted) -> None:
+        input = self.query_one(Input)
+        input.clear()
         if event.value == "!q":
             self.exit()
             return
         if len(event.value) == 0:
             return
         if self.handler is not None:
+            input.disabled = True
+            prev_placeholder = input.placeholder
+            input.placeholder = "Thinking..."
             await self.handler(event)
-        self.query_one(Input).clear()
+            input.placeholder = prev_placeholder
+            input.disabled = False
+        input.focus()
+
+    async def on_app_focus(self, event: events.AppFocus) -> None:
+        input = self.query_one(Input)
+        input.focus()
 
     def register_handler(self, handler: Callable[[Any], Coroutine[Any, Any, Any]]):
         self.handler = handler
 
-    def write(self, message: str):
-        markdown = Markdown(message.strip())
+    async def write(self, message: str, role: str = "system"):
+        label = {
+            "system": "System",
+            "bot": "MockBot",
+            "user": self.username,
+        }
+        markdown = Vertical(Label(label.get(role, "System")), Markdown(message.strip()))
+        markdown.add_class(role)
         self.messages.append(markdown)
         try:
             chat = self.query_one("#chat_scroll", VerticalScroll)
-            chat.mount(self.messages[-1])
-            chat.scroll_end()
+            await chat.mount(self.messages[-1])
+            chat.scroll_page_down()
         except LookupError:
             return

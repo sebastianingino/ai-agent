@@ -19,11 +19,12 @@ load_dotenv()
 # The message content and members intent must be enabled in the Discord Developer Portal for the bot to work.
 intents = discord.Intents.all()
 
+bot: commands.Bot
 environment = os.getenv("ENVIRONMENT")
-if environment == "PROD":
+if environment == "DEV":
+    bot = MockBot(command_prefix=PREFIX, intents=intents)  # type: ignore
+else:
     bot = commands.Bot(command_prefix=PREFIX, intents=intents)
-elif environment == "DEV":
-    bot = MockBot(command_prefix=PREFIX, intents=intents) # type: ignore
 
 # Import the Mistral agent from the agent.py file
 agent = MistralAgent()

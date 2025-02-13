@@ -27,6 +27,15 @@ class MockState(discord.state.ConnectionState):
     def _get_guild(self, guild_id: Optional[int]) -> Optional[discord.Guild]:
         return None
 
+class MockChannel():
+    ui: MockBotUI
+
+    def __init__(self, ui: MockBotUI):
+        self.ui = ui
+
+    async def send(self, content: str, reference: Optional[discord.Message] = None, **kwargs):
+        await self.ui.write(content, role="bot")
+
 class MockBot:
     intents: discord.Intents
     command_prefix: str
@@ -37,6 +46,7 @@ class MockBot:
 
     message_id: int
     state: MockState
+    channel: MockChannel
     end_user: discord.types.user.User
 
     def __init__(self, *, intents: discord.Intents, command_prefix: str):
@@ -48,6 +58,7 @@ class MockBot:
 
         self.message_id = 0
         self.state = MockState()
+        self.channel = MockChannel(self.app)
 
         userPayload = discord.types.user.User(
             id=0,
@@ -70,12 +81,13 @@ class MockBot:
         return decorator
 
     async def ui_handler(self, event: Any):
-        LOGGER.info(f"Received event: {event}")
         if isinstance(event, MockBotUI.OnReady):
             on_ready_msg = await self.get_event("on_ready")()
             if on_ready_msg:
-                self.app.write(on_ready_msg)
+                await self.app.write(on_ready_msg)
         if isinstance(event, MockBotUI.InputSubmitted):
+            await self.app.write(event.value, role="user")
+
             data = {
                 "id": self.message_id,
                 "author": self.end_user,
@@ -90,7 +102,7 @@ class MockBot:
                 "mention_everyone": False,
                 "tts": False,
             }
-            message = discord.Message(state=self.state, channel=None, data=data)  # type: ignore
+            message = discord.Message(state=self.state, channel=self.channel, data=data)  # type: ignore
             await self.get_event("on_message")(message)
 
     def get_event(self, name: str):

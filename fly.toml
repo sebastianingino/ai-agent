@@ -1,0 +1,10 @@
+app = "kubot"
+primary_region = "lax"
+
+[build]
+dockerfile = "Dockerfile"
+build-target = "build"
+
+[env]
+ENVIRONMENT="PROD"
+

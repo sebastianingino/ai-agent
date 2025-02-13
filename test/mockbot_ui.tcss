@@ -1,9 +1,40 @@
 Markdown {
-  padding: 1 2;
-  margin: 1 0;
+  padding: 0 2;
+  margin: 0;
+  border: round lightblue;
+}
+#chat_scroll Vertical {
+  height: auto;
+}
+
+#chat_scroll Vertical Markdown {
+  width: 70%;
+}
+
+#chat_scroll Vertical Label {
+  width: 70%;
+  padding: 0 1;
+  margin: 0;
+  color: gray;
 }
 
 Markdown * {
     content-align-horizontal: left !important;
     margin: 0;
+}
+
+.bot {
+  align: left top;
+}
+
+.user {
+  align: right top;
+}
+
+.bot Label {
+  text-align: left;
+}
+
+.user Label {
+  text-align: right;
 }
