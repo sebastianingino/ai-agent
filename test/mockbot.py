@@ -112,7 +112,9 @@ class MockBot:
         if message.content.startswith(self.command_prefix):
             command = message.content[len(self.command_prefix) :]
             if command in self.commands:
-                self.commands[command](message)
+                message_content = message.content.lstrip(self.command_prefix + command).strip()
+                arg = message_content if message_content and len(message_content) > 0 else None
+                await self.commands[command](self.channel, arg=arg)
 
     def run(self, token: str):
         self.app.register_handler(self.ui_handler)
