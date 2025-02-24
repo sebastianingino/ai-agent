@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 from agent import MistralAgent
 import src.commands as bot_commands
 
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+
 PREFIX = "!"
 
 # Setup logging
@@ -33,6 +36,17 @@ agent = MistralAgent()
 
 # Get the token from the environment variables
 token = os.getenv("DISCORD_TOKEN")
+
+# Connect to MongoDB
+uri = "mongodb+srv://admin:admin@kubot.a4flu.mongodb.net/?retryWrites=true&w=majority&appName=kubot"
+# Create a new client and connect to the server
+client = MongoClient(uri, server_api=ServerApi('1'))
+# Send a ping to confirm a successful connection
+try:
+    client.admin.command('ping')
+    print("Pinged your deployment. You successfully connected to MongoDB!")
+except Exception as e:
+    print(e)
 
 
 @bot.event
