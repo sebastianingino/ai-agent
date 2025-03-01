@@ -9,7 +9,8 @@ dependencies = [
     "discord-py>=2.4.0",
     "mistralai>=1.4.0",
     "python-dotenv>=1.0.1",
-    "textual>=1.0.0",
+    "textual>=2.1.2",
+    "beanie>=1.29.0",
 ]
 
 [tool.setuptools]

@@ -1,15 +1,15 @@
+import asyncio
 import os
 import discord
 import logging
 
 from discord.ext import commands
+from src.database.database import init_database
+from src.model import Models
 from test.mockbot import MockBot
 from dotenv import load_dotenv
 from agent import MistralAgent
 import src.commands as bot_commands
-
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
 
 PREFIX = "!"
 
@@ -38,16 +38,7 @@ agent = MistralAgent()
 token = os.getenv("DISCORD_TOKEN")
 
 # Connect to MongoDB
-uri = "mongodb+srv://admin:admin@kubot.a4flu.mongodb.net/?retryWrites=true&w=majority&appName=kubot"
-# Create a new client and connect to the server
-client = MongoClient(uri, server_api=ServerApi('1'))
-# Send a ping to confirm a successful connection
-try:
-    client.admin.command('ping')
-    print("Pinged your deployment. You successfully connected to MongoDB!")
-except Exception as e:
-    print(e)
-
+asyncio.run(init_database(Models))
 
 @bot.event
 async def on_ready():
