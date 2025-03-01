@@ -60,7 +60,7 @@ class Command:
         if "command_stack" not in ctx.__dict__:
             ctx.command_stack = []  # type: ignore
         if "user" not in ctx.__dict__:
-            ctx.user = await UserModel.find_one(UserModel.discord_id == ctx.author.id)  # type: ignore
+            ctx.user = await UserModel.find_one(UserModel.discord_id == ctx.author.id, fetch_links=True)  # type: ignore
             if ctx.user is None:  # type: ignore
                 ctx.user = UserModel(discord_id=ctx.author.id)  # type: ignore
                 await ctx.user.insert()  # type: ignore

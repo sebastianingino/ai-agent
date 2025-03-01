@@ -3,6 +3,8 @@ from typing import Any, Callable, Coroutine, Dict, Tuple
 
 import discord
 
+from src.model.user import User
+
 AsyncCallable = Callable[..., Coroutine[Any, Any, Any]]
 
 LOGGER = logging.getLogger(__name__)
@@ -55,11 +57,16 @@ class _Reactions:
 
         reactions = self.handlers[message.id]
 
+        userModel = await User.find_one(User.discord_id == user.id, fetch_links=True)
+        if userModel is None:
+            userModel = User(discord_id=user.id)
+            await userModel.insert()
+
         if str(reaction.emoji) in reactions:
             callback, args = reactions[str(reaction.emoji)]
             LOGGER.debug(f"Handled reaction {reaction.emoji} on message {message.id}")
             self.unregister_handler(message)
-            await callback(message, user, *args)
+            await callback(message, userModel, *args)
             return True
 
         LOGGER.debug(f"No handler for reaction {reaction.emoji} on message {message.id}")

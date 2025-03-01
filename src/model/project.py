@@ -1,14 +1,15 @@
 from typing import List
-from beanie import Document, Link
+from beanie import Document, Link, PydanticObjectId
 from .task import Task
-from .user import User
 
 
 class Project(Document):
     name: str
-    owner: Link[User]
+    owner: PydanticObjectId
 
-    users: List[Link[User]] = []
+    members: List[PydanticObjectId] = []
+    admins: List[PydanticObjectId] = []
+
     tasks: List[Link[Task]] = []
     objects: List[str] = []
 

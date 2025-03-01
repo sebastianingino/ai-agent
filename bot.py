@@ -1,5 +1,6 @@
 import asyncio
 import os
+import coloredlogs
 import discord
 import logging
 
@@ -16,6 +17,10 @@ PREFIX = "!"
 
 # Setup logging
 LOGGER = logging.getLogger("discoin")
+coloredlogs.install(level="DEBUG", fmt="%(asctime)s %(name)s %(levelname)s %(message)s")
+logging.getLogger("asyncio").setLevel(logging.INFO)
+logging.getLogger("discord").setLevel(logging.INFO)
+logging.getLogger("httpcore").setLevel(logging.INFO)
 
 # Load the environment variables
 load_dotenv()
@@ -111,7 +116,6 @@ async def main():
     await init_database(Models)
 
     # Start the bot, connecting it to the gateway
-    logging.getLogger("discord").setLevel(logging.WARNING)
     await bot.start(token)  # type: ignore
 
 
