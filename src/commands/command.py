@@ -53,11 +53,17 @@ class Command:
 
     async def entry(self, ctx: commands.Context, *args: str):
         action = self.parse(args)
-        LOGGER.debug(f"Command {self.name} entry {args} -> {action}")
+        if action:
+            LOGGER.debug(f"Command {self.name} entry {args} -> {action.name}")
+        else:
+            LOGGER.debug(f"Command {self.name} entry {args}")
         if "command_stack" not in ctx.__dict__:
             ctx.command_stack = []  # type: ignore
         if "user" not in ctx.__dict__:
-            ctx.user = await UserModel.find_one(discord_id=ctx.author.id)  # type: ignore
+            ctx.user = await UserModel.find_one(UserModel.discord_id == ctx.author.id)  # type: ignore
+            if ctx.user is None:  # type: ignore
+                ctx.user = UserModel(discord_id=ctx.author.id)  # type: ignore
+                await ctx.user.insert()  # type: ignore
         ctx.command_stack.append(self)  # type: ignore
         if action is None:
             return await self.callback(ctx, *args)
@@ -71,7 +77,7 @@ class Command:
             return Command("help", None, self._default_help)
 
         for subcommand in self.subcommands:
-            if subcommand.name == args[0]:
+            if subcommand.name.lower() == args[0].lower():
                 return subcommand
         return None
 
@@ -92,4 +98,4 @@ class Command:
         """.strip()
 
     async def _default_help(self, ctx: commands.Context, *args: str):
-        await ctx.send(self.helptext())
+        await ctx.reply(self.helptext())

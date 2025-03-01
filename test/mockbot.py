@@ -36,6 +36,9 @@ class MockChannel():
     async def send(self, content: str, reference: Optional[discord.Message] = None, **kwargs):
         await self.ui.write(content, role="bot")
 
+    async def reply(self, content: str, reference: Optional[discord.Message] = None, **kwargs):
+        await self.ui.write(content, role="bot")
+
 class MockBot:
     intents: discord.Intents
     command_prefix: str
@@ -123,3 +126,7 @@ class MockBot:
     def run(self, token: str):
         self.app.register_handler(self.ui_handler)
         self.app.run()
+
+    async def start(self, token: str):
+        self.app.register_handler(self.ui_handler)
+        await self.app.run_async()

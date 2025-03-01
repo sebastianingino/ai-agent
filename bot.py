@@ -15,7 +15,7 @@ import src.commands as bot_commands
 PREFIX = "!"
 
 # Setup logging
-logger = logging.getLogger("discord")
+LOGGER = logging.getLogger("discoin")
 
 # Load the environment variables
 load_dotenv()
@@ -50,7 +50,7 @@ async def on_ready():
 
     https://discordpy.readthedocs.io/en/latest/api.html#discord.on_ready
     """
-    logger.info(f"{bot.user} has connected to Discord!")
+    LOGGER.info(f"{bot.user} has connected to Discord!")
 
 
 @bot.event
@@ -61,6 +61,8 @@ async def on_message(message: discord.Message):
     https://discordpy.readthedocs.io/en/latest/api.html#discord.on_message
     """
     # Don't delete this line! It's necessary for the bot to process commands.
+    LOGGER.info(f"Processing message from {message.author}: {message.content}")
+    
     await bot.process_commands(message)
 
     # Ignore messages from self or other bots to prevent infinite loops.
@@ -69,7 +71,6 @@ async def on_message(message: discord.Message):
 
     # Process the message with the agent you wrote
     # Open up the agent.py file to customize the agent
-    logger.info(f"Processing message from {message.author}: {message.content}")
     response = await agent.run(message)
 
     # Send the response back to the channel
@@ -84,23 +85,11 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     https://discordpy.readthedocs.io/en/latest/api.html
     """
 
+    LOGGER.info(f"Reaction added by {user}: {reaction.emoji}")
+
     # Check if the message was awaiting a reaction
     message = reaction.message
-    if message.author == bot.user and Reactions.has_handler(message):
-        Reactions.handle(reaction, reaction.message, user)
-    elif Reactions.has_handler(message):
-        # Check if the expected user reacted
-        if user == message.author:
-            Reactions.handle(reaction, reaction.message, user)
-    elif (
-        message.type == discord.MessageType.reply
-        and message.reference
-        and message.reference.resolved
-        and isinstance(message.reference.resolved, discord.Message)
-        and Reactions.has_handler(message.reference.resolved)
-    ):
-        # Check if previous message had a reaction handler
-        Reactions.handle(reaction, message.reference.resolved, user)
+    await Reactions.handle(reaction, message, user)
 
 
 # Commands
@@ -113,10 +102,18 @@ bot_commands.register(bot)
 @bot.command(name="ping", help="Pings the bot.")
 async def ping(ctx, *, arg=None):
     if arg is None:
-        await ctx.send("Pong!")
+        await ctx.reply("Pong!")
     else:
-        await ctx.send(f"Pong! Your argument was {arg}")
+        await ctx.reply(f"Pong! Your argument was {arg}")
+
+async def main():
+    # Connect to MongoDB
+    await init_database(Models)
+
+    # Start the bot, connecting it to the gateway
+    logging.getLogger("discord").setLevel(logging.WARNING)
+    await bot.start(token)  # type: ignore
 
 
-# Start the bot, connecting it to the gateway
-bot.run(token)  # type: ignore
+if __name__ == "__main__":
+    asyncio.run(main())

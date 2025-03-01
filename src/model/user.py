@@ -1,5 +1,6 @@
-from typing import Optional
-from beanie import Document, PydanticObjectId
+from typing import Annotated, Optional
+from beanie import Document, Indexed, PydanticObjectId
 
 class User(Document):
-    default_project: Optional[PydanticObjectId] = None
+    discord_id: Annotated[int, Indexed(unique=True)]
+    default_project: Optional[PydanticObjectId]
