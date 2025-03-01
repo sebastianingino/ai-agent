@@ -1,7 +1,9 @@
 from abc import ABCMeta, abstractmethod
 from pydantic import BaseModel
+from result import Result,
 
 from model.user import User
+
 
 
 class Action(BaseModel, metaclass=ABCMeta):
@@ -16,7 +18,7 @@ class Action(BaseModel, metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    async def preflight(self, user: User) -> bool:
+    async def preflight(self, user: User) -> Result[None, str]:
         pass
 
     @abstractmethod

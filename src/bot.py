@@ -5,13 +5,12 @@ import discord
 import logging
 
 from discord.ext import commands
-from src.database.database import init_database
-from src.model import Models
-from src.reactions import Reactions
-from test.mockbot import MockBot
+from database.database import init_database
+from model import Models
+from reactions import Reactions
 from dotenv import load_dotenv
 from agent import MistralAgent
-import src.commands as bot_commands
+import commands as bot_commands
 
 PREFIX = "!"
 
@@ -32,6 +31,7 @@ intents = discord.Intents.all()
 bot: commands.Bot
 environment = os.getenv("ENVIRONMENT")
 if environment == "DEV":
+    from test.mockbot import MockBot
     bot = MockBot(command_prefix=PREFIX, intents=intents)  # type: ignore
 else:
     bot = commands.Bot(command_prefix=PREFIX, intents=intents)

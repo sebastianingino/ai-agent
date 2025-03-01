@@ -14,11 +14,11 @@ LOGGER = logging.getLogger(__name__)
 
 
 @command("Project", "Manage your projects")
-async def Project(ctx: CommandContext, *args: str):
+async def project_entry(ctx: CommandContext, *args: str):
     await ctx.reply(await Chat.help(ctx.command_stack[-1].helptext() or ""))
 
 
-@command("New", "Create a new project", parent=Project)
+@command("New", "Create a new project", parent=project_entry)
 async def project_new(ctx: CommandContext, *args: str):
     if len(args) < 1:
         return await ctx.reply("Usage: !project new [name]")
@@ -49,7 +49,7 @@ async def project_new(ctx: CommandContext, *args: str):
     )
 
 
-@command("List", "List your projects", parent=Project)
+@command("List", "List your projects", parent=project_entry)
 async def project_list(ctx: CommandContext, *args: str):
     if len(args) > 0:
         return await ctx.reply("Usage: !project list")
@@ -64,7 +64,7 @@ async def project_list(ctx: CommandContext, *args: str):
     )
 
 
-@command("Info", "Get information about a project", parent=Project)
+@command("Info", "Get information about a project", parent=project_entry)
 async def project_info(ctx: CommandContext, *args: str):
     if len(args) < 1:
         return await ctx.reply("Usage: !project info [name]")
@@ -94,7 +94,7 @@ async def project_deadline(ctx: CommandContext, *args: str):
     pass
 
 
-@command("Delete", "Delete a project", parent=Project)
+@command("Delete", "Delete a project", parent=project_entry)
 async def project_delete(ctx: CommandContext, *args: str):
     if len(args) < 1:
         return await ctx.reply("Usage: !project delete [name]")
@@ -112,7 +112,7 @@ async def project_delete(ctx: CommandContext, *args: str):
     )
 
 
-@command("Invite", "Invite users to a project", parent=Project)
+@command("Invite", "Invite users to a project", parent=project_entry)
 async def project_invite(ctx: CommandContext, *args: str):
     if len(args) < 1:
         return await ctx.reply("Usage: !project invite [name] [users]")
@@ -146,7 +146,7 @@ async def project_invite(ctx: CommandContext, *args: str):
     )
 
 
-@command("Kick", "Kick users from a project", parent=Project)
+@command("Kick", "Kick users from a project", parent=project_entry)
 async def project_kick(ctx: CommandContext, *args: str):
     if len(args) < 1:
         return await ctx.reply("Usage: !project kick [name] [users]")
@@ -179,7 +179,8 @@ async def project_kick(ctx: CommandContext, *args: str):
         f"User{'s' if len(mentioned) > 1 else ''} {', '.join(user.mention for user in mentioned)} removed from project {name}."
     )
 
-@command("Leave", "Leave a project", parent=Project)
+
+@command("Leave", "Leave a project", parent=project_entry)
 async def project_leave(ctx: CommandContext, *args: str):
     if len(args) < 1:
         return await ctx.reply("Usage: !project leave [name]")

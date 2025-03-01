@@ -12,7 +12,7 @@ class ProjectNew(Action):
     effective = True
     unsafe = False
  
-    async def preflight(self, user: User):
+    async def preflight(self, user: User) -> bool:
         return not any(p.name == self.name for p in user.projects)
         
 
