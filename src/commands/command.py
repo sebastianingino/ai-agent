@@ -3,11 +3,14 @@ from typing import Any, List, Optional, Set, Tuple
 
 from discord.ext import commands
 
+from src.model.user import User as UserModel
+
 LOGGER = logging.getLogger(__name__)
 
 
 class CommandContext(commands.Context):
     command_stack: List["Command"]
+    user: UserModel
 
 
 def command(
@@ -53,6 +56,8 @@ class Command:
         LOGGER.debug(f"Command {self.name} entry {args} -> {action}")
         if "command_stack" not in ctx.__dict__:
             ctx.command_stack = []  # type: ignore
+        if "user" not in ctx.__dict__:
+            ctx.user = await UserModel.find_one(discord_id=ctx.author.id)  # type: ignore
         ctx.command_stack.append(self)  # type: ignore
         if action is None:
             return await self.callback(ctx, *args)

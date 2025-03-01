@@ -6,6 +6,7 @@ import logging
 from discord.ext import commands
 from src.database.database import init_database
 from src.model import Models
+from src.reactions import Reactions
 from test.mockbot import MockBot
 from dotenv import load_dotenv
 from agent import MistralAgent
@@ -39,6 +40,7 @@ token = os.getenv("DISCORD_TOKEN")
 
 # Connect to MongoDB
 asyncio.run(init_database(Models))
+
 
 @bot.event
 async def on_ready():
@@ -74,6 +76,33 @@ async def on_message(message: discord.Message):
     await message.reply(response)
 
 
+@bot.event
+async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
+    """
+    Called when a reaction is added to a message the bot can see.
+
+    https://discordpy.readthedocs.io/en/latest/api.html
+    """
+
+    # Check if the message was awaiting a reaction
+    message = reaction.message
+    if message.author == bot.user and Reactions.has_handler(message):
+        Reactions.handle(reaction, reaction.message, user)
+    elif Reactions.has_handler(message):
+        # Check if the expected user reacted
+        if user == message.author:
+            Reactions.handle(reaction, reaction.message, user)
+    elif (
+        message.type == discord.MessageType.reply
+        and message.reference
+        and message.reference.resolved
+        and isinstance(message.reference.resolved, discord.Message)
+        and Reactions.has_handler(message.reference.resolved)
+    ):
+        # Check if previous message had a reaction handler
+        Reactions.handle(reaction, message.reference.resolved, user)
+
+
 # Commands
 bot_commands.register(bot)
 
@@ -87,6 +116,7 @@ async def ping(ctx, *, arg=None):
         await ctx.send("Pong!")
     else:
         await ctx.send(f"Pong! Your argument was {arg}")
+
 
 # Start the bot, connecting it to the gateway
 bot.run(token)  # type: ignore
