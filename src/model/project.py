@@ -1,6 +1,6 @@
 from typing import List
 from beanie import Document, Link, PydanticObjectId
-from .task import Task
+from model.task import Task
 
 
 class Project(Document):

@@ -3,12 +3,12 @@ from typing import List
 
 import discord
 
-from src.reactions import Reactions
+from reactions import Reactions
 
-from .command import command, CommandContext
-from ..mistral.chat import Chat
-from ..model.project import Project as ProjectModel
-from ..model.user import User as UserModel
+from commands.command import command, CommandContext
+from mistral.chat import Chat
+from model.project import Project as ProjectModel
+from model.user import User as UserModel
 
 LOGGER = logging.getLogger(__name__)
 

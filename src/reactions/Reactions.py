@@ -3,7 +3,7 @@ from typing import Any, Callable, Coroutine, Dict, Tuple
 
 import discord
 
-from src.model.user import User
+from model.user import User
 
 AsyncCallable = Callable[..., Coroutine[Any, Any, Any]]
 

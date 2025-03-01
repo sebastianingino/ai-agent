@@ -1,6 +1,6 @@
-from .project import Project
-from .task import Task
-from .user import User
+from model.project import Project
+from model.task import Task
+from model.user import User
 
 Models = [Project, Task, User]
 

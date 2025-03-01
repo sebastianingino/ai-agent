@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Set, Tuple
 
 from discord.ext import commands
 
-from src.model.user import User as UserModel
+from model.user import User as UserModel
 
 LOGGER = logging.getLogger(__name__)
 

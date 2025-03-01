@@ -1,7 +1,7 @@
 from typing import Annotated, List, Optional
-from beanie import Document, Indexed, Link, PydanticObjectId
+from beanie import Document, Indexed, Link
 
-from .project import Project
+from model.project import Project
 
 class User(Document):
     discord_id: Annotated[int, Indexed(unique=True)]
