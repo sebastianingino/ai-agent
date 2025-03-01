@@ -1,4 +1,4 @@
-from typing import ClassVar, List, Optional, Union
+from typing import ClassVar, List, Optional
 import discord
 from result import Err, Ok, Result
 
@@ -247,9 +247,10 @@ class ProjectLeave(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, str]:
         for project in ctx.user.projects:
+            print(project)
             if project.name == self.name:  # type: ignore
                 if project.owner == ctx.user.id:  # type: ignore
-                    Err("Owner cannot leave project.")
+                    return Err("Sorry, you can't leave a project you own. Use `!project delete` instead.")
                 self._memo["project"] = project
                 return Ok(None)
         return Err(f"Project {self.name} not found.")
@@ -257,13 +258,18 @@ class ProjectLeave(Action):
     def preflight_wrap(self, result: Result[None, str]) -> Result[None, str]:
         return result
 
-    async def execute(self, ctx: Context) -> Result[None, None]:
+    async def execute(self, ctx: Context) -> Result[None, Exception]:
         project = self._memo["project"]
-        ctx.user.projects.remove(project)
-        project.members.remove(ctx.user.id)
-        return Ok(None)
+        try:
+            ctx.user.projects.remove(project)
+            project.members.remove(ctx.user.id)
+            await ctx.user.save()
+            await project.save()
+            return Ok(None)
+        except Exception as e:
+            return Err(e)
     
-    def execute_wrap(self, result: Result[None, None]) -> Result[str, str]:
+    def execute_wrap(self, result: Result[None, Exception]) -> Result[str, str]:
         if result.is_err():
             return Err(f"Failed to leave project {self.name}.")
         return Ok(f"Left project {self.name}.")

@@ -2,14 +2,22 @@ import logging
 
 import discord
 
-from actions.project import ProjectDelete, ProjectInfo, ProjectInvite, ProjectKick, ProjectLeave, ProjectList, ProjectNew
+from actions.project import (
+    ProjectDelete,
+    ProjectInfo,
+    ProjectInvite,
+    ProjectKick,
+    ProjectLeave,
+    ProjectList,
+    ProjectNew,
+)
 from reactions import Reactions
 
 from commands.command import command, CommandContext
 from mistral.chat import Chat
 from model.project import Project as ProjectModel
 from model.user import User as UserModel
-from util.util import result_collapse
+from util.util import preflight_execute, result_collapse
 
 LOGGER = logging.getLogger(__name__)
 
@@ -57,13 +65,7 @@ async def project_list(ctx: CommandContext, *args: str):
     if len(args) > 0:
         return await ctx.reply("Usage: !project list")
 
-    action = ProjectList()
-    preflight = await action.preflight(ctx)
-    if preflight.is_err():
-        return await ctx.reply(action.preflight_wrap(preflight).unwrap_err())
-
-    execute = await action.execute(ctx)
-    return await ctx.reply(result_collapse(action.execute_wrap(execute)))
+    return await ctx.reply(await preflight_execute(ProjectList(), ctx))
 
 
 @command("Info", "Get information about a project", parent=project_entry)
@@ -72,13 +74,7 @@ async def project_info(ctx: CommandContext, *args: str):
         return await ctx.reply("Usage: !project info [name]")
     name = " ".join(args)
 
-    action = ProjectInfo(name=name)
-    preflight = await action.preflight(ctx)
-    if preflight.is_err():
-        return await ctx.reply(action.preflight_wrap(preflight).unwrap_err())
-
-    execute = await action.execute(ctx)
-    return await ctx.reply(result_collapse(action.execute_wrap(execute)))
+    return await ctx.reply(await preflight_execute(ProjectInfo(name=name), ctx))
 
 
 async def project_deadline(ctx: CommandContext, *args: str):
@@ -110,13 +106,9 @@ async def project_invite(ctx: CommandContext, *args: str):
     name = " ".join(args for args in args if not args.startswith("<@"))
     users = [user.id for user in ctx.message.mentions]
 
-    action = ProjectInvite(name=name, users=users)
-    preflight = await action.preflight(ctx)
-    if preflight.is_err():
-        return await ctx.reply(action.preflight_wrap(preflight).unwrap_err())
-
-    execute = await action.execute(ctx)
-    return await ctx.reply(result_collapse(action.execute_wrap(execute)))
+    return await ctx.reply(
+        await preflight_execute(ProjectInvite(name=name, users=users), ctx)
+    )
 
 
 @command("Kick", "Kick users from a project", parent=project_entry)
@@ -127,13 +119,9 @@ async def project_kick(ctx: CommandContext, *args: str):
     name = " ".join(args for args in args if not args.startswith("<@"))
     users = [user.id for user in ctx.message.mentions]
 
-    action = ProjectKick(name=name, users=users)
-    preflight = await action.preflight(ctx)
-    if preflight.is_err():
-        return await ctx.reply(action.preflight_wrap(preflight).unwrap_err())
-
-    execute = await action.execute(ctx)
-    return await ctx.reply(result_collapse(action.execute_wrap(execute)))
+    return await ctx.reply(
+        await preflight_execute(ProjectKick(name=name, users=users), ctx)
+    )
 
 
 @command("Leave", "Leave a project", parent=project_entry)
@@ -142,13 +130,7 @@ async def project_leave(ctx: CommandContext, *args: str):
         return await ctx.reply("Usage: !project leave [name]")
     name = " ".join(args)
 
-    action = ProjectLeave(name=name)
-    preflight = await action.preflight(ctx)
-    if preflight.is_err():
-        return await ctx.reply(action.preflight_wrap(preflight).unwrap_err())
-
-    execute = await action.execute(ctx)
-    return await ctx.reply(result_collapse(action.execute_wrap(execute)))
+    return await ctx.reply(await preflight_execute(ProjectLeave(name=name), ctx))
 
 
 # Reaction Handlers
