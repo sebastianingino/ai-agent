@@ -191,3 +191,79 @@ class ProjectInvite(Action):
         return Ok(
             f"User{'s' if len(self.users) > 1 else ''} {', '.join(user.mention for user in result.unwrap())} added to project {self.name}."
         )
+
+
+class ProjectKick(Action):
+    name: str
+    users: List[int]
+
+    effective: ClassVar[bool] = True
+    unsafe: ClassVar[bool] = False
+
+    async def preflight(self, ctx: Context) -> Result[None, None]:
+        project = await Project.find_one(
+            Project.name == self.name, Project.owner == ctx.user.id
+        )
+        if not project:
+            return Err(None)
+        self._memo["project"] = project
+        return Ok(None)
+
+    def preflight_wrap(self, result: Result[None, None]) -> Result[None, str]:
+        if result.is_err():
+            return Err(f"Project {self.name} not found.")
+        return Ok(None)
+
+    async def execute(self, ctx: Context) -> Result[List[discord.User], None]:
+        project = self._memo["project"]
+        mentions: List[discord.User] = []
+        for user in self.users:
+            user_model = await User.find_one(User.discord_id == user)
+            if not user_model:
+                user_model = User(discord_id=user)
+                await user_model.insert()
+            project.members.remove(user_model.id)
+            user_model.projects.remove(project)
+            await user_model.save()
+            if mention := ctx.bot.get_user(user):
+                mentions.append(mention)
+        await project.save()
+
+        return Ok(mentions)
+
+    def execute_wrap(self, result: Result[List[discord.User], None]):
+        if result.is_err():
+            return Err(f"Failed to remove users from project {self.name}.")
+        return Ok(
+            f"User{'s' if len(self.users) > 1 else ''} {', '.join(user.mention for user in result.unwrap())} removed from project {self.name}."
+        )
+
+
+class ProjectLeave(Action):
+    name: str
+
+    effective: ClassVar[bool] = True
+    unsafe: ClassVar[bool] = True
+
+    async def preflight(self, ctx: Context) -> Result[None, str]:
+        for project in ctx.user.projects:
+            if project.name == self.name:  # type: ignore
+                if project.owner == ctx.user.id:  # type: ignore
+                    Err("Owner cannot leave project.")
+                self._memo["project"] = project
+                return Ok(None)
+        return Err(f"Project {self.name} not found.")
+
+    def preflight_wrap(self, result: Result[None, str]) -> Result[None, str]:
+        return result
+
+    async def execute(self, ctx: Context) -> Result[None, None]:
+        project = self._memo["project"]
+        ctx.user.projects.remove(project)
+        project.members.remove(ctx.user.id)
+        return Ok(None)
+    
+    def execute_wrap(self, result: Result[None, None]) -> Result[str, str]:
+        if result.is_err():
+            return Err(f"Failed to leave project {self.name}.")
+        return Ok(f"Left project {self.name}.")
