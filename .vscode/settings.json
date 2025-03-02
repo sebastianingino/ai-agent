@@ -3,6 +3,9 @@
         "audioop",
         "dotenv",
         "mistralai",
-        "mockbot"
-    ]
+        "mockbot",
+        "preflighted"
+    ],
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "standard"
 }

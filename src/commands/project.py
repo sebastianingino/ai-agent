@@ -142,7 +142,7 @@ async def project_leave(ctx: CommandContext, *args: str):
 
 # Reaction Handlers
 async def set_default(message: discord.Message, user: UserModel, project: ProjectModel):
-    user.default_project = project
+    user.default_project = project  # type: ignore
     await user.save()
     await message.reply(f"Project {project.name} set as default.")
 

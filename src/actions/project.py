@@ -28,12 +28,14 @@ class ProjectNew(Action):
         return Ok(None)
 
     async def execute(self, ctx: Context) -> Result[Project, Exception]:
+        if not ctx.user.id:
+            return Err(Exception("User not found."))
         try:
             project = Project(
                 name=self.name, owner=ctx.user.id, description=self.description
             )
             project.members.append(ctx.user.id)
-            ctx.user.projects.append(project)
+            ctx.user.projects.append(project)  # type: ignore
             await project.save()
             await ctx.user.save()
             return Ok(project)
@@ -50,10 +52,10 @@ class ProjectList(Action):
     effective: ClassVar[bool] = False
     unsafe: ClassVar[bool] = False
 
-    async def preflight(self, _: Context) -> Result[None, None]:
+    async def preflight(self, ctx: Context) -> Result[None, None]:
         return Ok(None)
 
-    def preflight_wrap(self, _: Result[None, None]) -> Result[None, str]:
+    def preflight_wrap(self, result: Result[None, None]) -> Result[None, str]:
         return Ok(None)
 
     async def execute(self, ctx: Context) -> Result[str, str]:
@@ -143,7 +145,7 @@ class ProjectDeadline(Action):
     def preflight_wrap(self, result: Result[None, str]) -> Result[None, str]:
         return result
 
-    async def execute(self, _: Context) -> Result[Optional[datetime], str]:
+    async def execute(self, ctx: Context) -> Result[Optional[datetime], str]:
         project = self._memo["project"]
         deadline = self._memo["datetime"]
 
@@ -189,7 +191,7 @@ class ProjectDelete(Action):
             return Err(f"Project {self.name} not found.")
         return Ok(None)
 
-    async def execute(self, _: Context) -> Result[None, None]:
+    async def execute(self, ctx: Context) -> Result[None, None]:
         project = self._memo["project"]
         await project.delete()
         return Ok(None)

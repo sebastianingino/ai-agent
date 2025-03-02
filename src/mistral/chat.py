@@ -32,7 +32,7 @@ class ChatModel:
 
         return ERROR_RESPONSE
 
-    async def help(self, help_text: str):
+    async def help(self, help_text: str) -> str:
         messages = [
             SystemMessage(
                 content=f"{SYSTEM_PROMPT} Please greet the user. This is the help text for this command: {help_text}. Please inform the user of your high-level capabilities in a sentence or two. Do not include any specific examples or instructions, but inform the user that they can use the `help` command to get more information. Do not ask the user a question."
@@ -44,8 +44,8 @@ class ChatModel:
             messages=messages,  # type: ignore
         )
 
-        if response.choices:
-            return response.choices[0].message.content
+        if response.choices and response.choices[0].message.content:
+            return str(response.choices[0].message.content)
 
         return ERROR_RESPONSE
 

@@ -6,6 +6,7 @@ from model.task import Task
 
 class Project(Document):
     name: str
+    description: Optional[str] = None
     owner: PydanticObjectId
 
     members: List[PydanticObjectId] = []

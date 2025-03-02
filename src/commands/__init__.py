@@ -2,10 +2,11 @@ from discord.ext import commands
 from commands.project import project_entry as Project
 from commands.settings import settings_entry as Settings
 
-command_dict = {
+command_map = {
     "project": Project,
     "settings": Settings,
 }
+
 
 class Help(commands.HelpCommand):
     async def send_bot_help(self, mapping):
@@ -15,12 +16,13 @@ Welcome to the project manager bot! I can help you manage your projects and sett
 Use the `help` command to get help with a specific command (e.g. `!help project`).
 
 **Available commands:**
-{'\n'.join(f"- `{command.name.lower()}`: {command.help}" for command in command_dict.values())}
+{'\n'.join(f"- `{command.name.lower()}`: {command.help}" for command in command_map.values())}
             """.strip()
         )
 
     async def send_command_help(self, command):
-        await self.context.reply(command_dict[command.name.lower()].helptext())
+        await self.context.reply(command_map[command.name.lower()].helptext())
+
 
 def register(bot: commands.Bot):
     bot.help_command = Help()

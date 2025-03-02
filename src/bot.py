@@ -11,6 +11,7 @@ from reactions import Reactions
 from dotenv import load_dotenv
 from agent import MistralAgent
 import commands as bot_commands
+from util.messages import bot_included
 
 PREFIX = "!"
 
@@ -65,14 +66,21 @@ async def on_message(message: discord.Message):
 
     https://discordpy.readthedocs.io/en/latest/api.html#discord.on_message
     """
-    # Don't delete this line! It's necessary for the bot to process commands.
     LOGGER.info(f"Processing message from {message.author}: {message.content}")
-    
+
+    # Don't delete this line! It's necessary for the bot to process commands.
     await bot.process_commands(message)
 
     # Ignore messages from self or other bots to prevent infinite loops.
     if message.author.bot or message.content.startswith("!"):
         return
+    
+    # Ignore threads/messages that haven't included the bot in the past
+    if not (await bot_included(message)):
+        return
+    
+    # Get the context of the message
+    context = await bot.get_context(message)
 
     # Process the message with the agent you wrote
     # Open up the agent.py file to customize the agent
@@ -101,9 +109,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
 bot_commands.register(bot)
 
 
-# This example command is here to show you how to add commands to the bot.
-# Run !ping with any number of arguments to see the command in action.
-# Feel free to delete this if your project will not need commands.
+# Debugging command
 @bot.command(name="ping", help="Pings the bot.")
 async def ping(ctx, *, arg=None):
     if arg is None:

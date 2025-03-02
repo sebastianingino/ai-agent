@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Annotated, Any, Dict, Union
-import discord
+from typing import Annotated, Any, ClassVar, Dict, Union
+import discord.ext.commands
 from pydantic import BaseModel, Field
 from result import Result
 
@@ -29,30 +29,23 @@ class Action(ABC, BaseModel):
     def __init_subclass__(cls, **kwargs):
         preflight_func = cls.preflight
 
-        def preflight(self, user: User):
+        def preflight(self, ctx: Context):
             self._preflighted = True
-            return preflight_func(self, user)
+            return preflight_func(self, ctx)
 
         cls.preflight = preflight
 
         execute_func = cls.execute
 
-        def execute(self, user: User):
+        def execute(self, ctx: Context):
             if not self._preflighted:
                 raise Exception("Preflight not run.")
-            return execute_func(self, user)
+            return execute_func(self, ctx)
 
         cls.execute = execute
 
-    @property
-    @abstractmethod
-    def unsafe(self) -> Annotated[bool, Field(exclude=True)]:
-        pass
-
-    @property
-    @abstractmethod
-    def effective(self) -> Annotated[bool, Field(exclude=True)]:
-        pass
+    unsafe: ClassVar[bool]
+    effective: ClassVar[bool]
 
     @abstractmethod
     async def preflight(self, ctx: Context) -> Result[Any, Any]:

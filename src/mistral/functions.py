@@ -25,7 +25,11 @@ def when_to_datetime(when: str) -> datetime:
         response_format=DateTime,
     )
 
-    if response.choices:
+    if (
+        response.choices
+        and response.choices[0].message
+        and response.choices[0].message.parsed
+    ):
         return datetime.fromisoformat(response.choices[0].message.parsed.dt)
 
     raise ValueError("Failed to parse 'when' to a datetime")
@@ -56,7 +60,11 @@ def datetime_to_when(dt: datetime) -> str:
         response_format=When,
     )
 
-    if response.choices:
+    if (
+        response.choices
+        and response.choices[0].message
+        and response.choices[0].message.parsed
+    ):
         return response.choices[0].message.parsed.when
 
     raise ValueError("Failed to convert datetime to 'when'")
