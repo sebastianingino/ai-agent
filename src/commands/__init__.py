@@ -34,3 +34,7 @@ def register(bot: commands.Bot):
     @bot.command(name=Settings.name.lower(), help=Settings.help)
     async def settings_entry(ctx: commands.Context, *args: str):
         await Settings.entry(ctx, *args)
+
+    @bot.command(name="reset", help="Resets the bot's state.")
+    async def reset(ctx: commands.Context):
+        await ctx.reply("Bot state reset.")

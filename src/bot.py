@@ -9,9 +9,9 @@ from database.database import init_database
 from model import Models
 from reactions import Reactions
 from dotenv import load_dotenv
-from agent import MistralAgent
+from mistral.agent import Agent
 import commands as bot_commands
-from util.messages import bot_included
+from util import messages
 
 PREFIX = "!"
 
@@ -37,16 +37,6 @@ if environment == "DEV":
 else:
     bot = commands.Bot(command_prefix=PREFIX, intents=intents)
 
-# Import the Mistral agent from the agent.py file
-agent = MistralAgent()
-
-
-# Get the token from the environment variables
-token = os.getenv("DISCORD_TOKEN")
-
-# Connect to MongoDB
-asyncio.run(init_database(Models))
-
 
 @bot.event
 async def on_ready():
@@ -66,7 +56,8 @@ async def on_message(message: discord.Message):
 
     https://discordpy.readthedocs.io/en/latest/api.html#discord.on_message
     """
-    LOGGER.info(f"Processing message from {message.author}: {message.content}")
+    if not message.author.bot or message.content.startswith("!"):
+        LOGGER.info(f"Processing message from {message.author}: {message.content}")
 
     # Don't delete this line! It's necessary for the bot to process commands.
     await bot.process_commands(message)
@@ -74,20 +65,21 @@ async def on_message(message: discord.Message):
     # Ignore messages from self or other bots to prevent infinite loops.
     if message.author.bot or message.content.startswith("!"):
         return
-    
-    # Ignore threads/messages that haven't included the bot in the past
-    if not (await bot_included(message)):
-        return
-    
+
     # Get the context of the message
-    context = await bot.get_context(message)
+    context = await messages.context(message)
+    # Ignore threads/messages that haven't included the bot in the past 200 messages
+    if not await messages.bot_included(context) and not await messages.is_bot_dm(message):
+        return
 
-    # Process the message with the agent you wrote
-    # Open up the agent.py file to customize the agent
-    response = await agent.run(message)
+    async with message.channel.typing():
+        # Process the message with the agent you wrote
+        # Open up the agent.py file to customize the agent
+        response = await Agent.handle(message, context)
 
-    # Send the response back to the channel
-    await message.reply(response)
+        # Send the response back to the channel
+        for chunk in messages.chunkify(response):
+            message = await message.reply(chunk)
 
 
 @bot.event
@@ -121,6 +113,8 @@ async def main():
     # Connect to MongoDB
     await init_database(Models)
 
+    # Get the token from the environment variables
+    token = os.getenv("DISCORD_TOKEN")
     # Start the bot, connecting it to the gateway
     await bot.start(token)  # type: ignore
 
