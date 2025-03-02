@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from mistralai import Mistral, SystemMessage, UserMessage
 
-MISTRAL_MODEL = "mistral-large-latest"
+MISTRAL_MODEL = "mistral-small-latest"
 SYSTEM_PROMPT = "You are a helpful and friendly project manager assistant."
 ERROR_RESPONSE = "Looks like something went wrong. Please try again later."
 

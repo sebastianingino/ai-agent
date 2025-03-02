@@ -3,6 +3,7 @@ import logging
 import discord
 
 from actions.project import (
+    ProjectDeadline,
     ProjectDelete,
     ProjectInfo,
     ProjectInvite,
@@ -11,6 +12,7 @@ from actions.project import (
     ProjectList,
     ProjectNew,
 )
+from mistral import functions
 from reactions import Reactions
 
 from commands.command import command, CommandContext
@@ -77,8 +79,13 @@ async def project_info(ctx: CommandContext, *args: str):
     return await ctx.reply(await preflight_execute(ProjectInfo(name=name), ctx))
 
 
+@command("Deadline", "Set a deadline for a project", parent=project_entry)
 async def project_deadline(ctx: CommandContext, *args: str):
-    pass
+    if len(args) < 1:
+        return await ctx.reply("Usage: !project deadline [when] -n [name]")
+    when = " ".join(args)
+
+    return await ctx.reply(await preflight_execute(ProjectDeadline(when=when), ctx))
 
 
 @command("Delete", "Delete a project", parent=project_entry)

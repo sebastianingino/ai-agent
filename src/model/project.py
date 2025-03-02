@@ -1,4 +1,5 @@
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 from beanie import Document, Link, PydanticObjectId
 from model.task import Task
 
@@ -12,6 +13,8 @@ class Project(Document):
 
     tasks: List[Link[Task]] = []
     objects: List[str] = []
+
+    deadline: Optional[datetime] = None
 
     class Meta:
         collection = "projects"

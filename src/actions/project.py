@@ -1,7 +1,9 @@
+from datetime import datetime
 from typing import ClassVar, List, Optional
 import discord
 from result import Err, Ok, Result
 
+from mistral import functions
 from model.project import Project
 from model.user import User
 from actions.action import Action, Context
@@ -114,6 +116,57 @@ class ProjectInfo(Action):
         if result.is_err():
             return Err(f"Failed to get info for project {self.name}")
         return Ok(result.unwrap())
+
+
+class ProjectDeadline(Action):
+    project_id: Optional[int] = None
+    when: str
+
+    effective: ClassVar[bool] = True
+    unsafe: ClassVar[bool] = False
+
+    async def preflight(self, ctx: Context) -> Result[None, str]:
+        datetime = functions.when_to_datetime(self.when)
+        if datetime.is_err():
+            return Err(f"Failed to parse date: {datetime.unwrap_err()}")
+        self._memo["datetime"] = datetime.unwrap()
+
+        if self.project_id:
+            return Ok(None)
+
+        for project in ctx.user.projects:
+            if project == ctx.user.default_project:
+                self._memo["project"] = project
+                return Ok(None)
+        return Err("No default project found.")
+
+    def preflight_wrap(self, result: Result[None, str]) -> Result[None, str]:
+        return result
+
+    async def execute(self, _: Context) -> Result[Optional[datetime], str]:
+        project = self._memo["project"]
+        deadline = self._memo["datetime"]
+
+        previous_deadline = project.deadline
+        if previous_deadline and previous_deadline == deadline:
+            return Err(f"Project {project.name} already has a deadline of {deadline}.")
+        project.deadline = deadline
+        await project.save()
+        return Ok(previous_deadline)
+
+    def execute_wrap(self, result: Result[Optional[datetime], str]) -> Result[str, str]:
+        project = self._memo["project"]
+        if result.is_err():
+            return Err(result.unwrap_err())
+        previous_deadline = result.unwrap()
+        if previous_deadline is None:
+            return Ok(f"Set deadline for project {project.name} to {self.when}.")
+        previous_deadline_text = functions.datetime_to_when(
+            previous_deadline
+        ).unwrap_or(previous_deadline.strftime("%Y-%m-%d %H:%M:%S"))
+        return Ok(
+            f"Changed deadline for project {project.name} from {previous_deadline_text} to {self.when}."
+        )
 
 
 class ProjectDelete(Action):
@@ -250,7 +303,9 @@ class ProjectLeave(Action):
             print(project)
             if project.name == self.name:  # type: ignore
                 if project.owner == ctx.user.id:  # type: ignore
-                    return Err("Sorry, you can't leave a project you own. Use `!project delete` instead.")
+                    return Err(
+                        "Sorry, you can't leave a project you own. Use `!project delete` instead."
+                    )
                 self._memo["project"] = project
                 return Ok(None)
         return Err(f"Project {self.name} not found.")
@@ -268,7 +323,7 @@ class ProjectLeave(Action):
             return Ok(None)
         except Exception as e:
             return Err(e)
-    
+
     def execute_wrap(self, result: Result[None, Exception]) -> Result[str, str]:
         if result.is_err():
             return Err(f"Failed to leave project {self.name}.")
