@@ -94,7 +94,7 @@ class Command:
 !{self.name.lower()} [subcommand] [args...]
 ```
 **Subcommands:**
-{"".join(f"{subcommand.name.lower()} - {subcommand.help}\n" for subcommand in self.subcommands)}
+{"".join(f"`{subcommand.name.lower()}` - {subcommand.help}\n" for subcommand in self.subcommands)}
         """.strip()
 
     async def _default_help(self, ctx: commands.Context, *args: str):
