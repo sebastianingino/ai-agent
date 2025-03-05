@@ -16,9 +16,11 @@ from actions.project import (
 )
 
 from commands.command import command, CommandContext
+from mistral import functions
 from mistral.chat import Chat
 from model.project import Project as ProjectModel
 from model.user import User as UserModel
+from parsers import content as content_parser
 from response.ButtonResponse import binary_response
 from util.util import preflight_execute, result_collapse
 
@@ -155,6 +157,12 @@ async def project_default(ctx: CommandContext, *args: str):
 
     return await ctx.reply(await preflight_execute(ProjectSetDefault(name=name), ctx))
 
+
+@command("Import", "Import a project from another service", parent=project_entry)
+async def project_import(ctx: CommandContext, *args: str):
+    content = await content_parser.from_message(ctx.message)
+    print(content)
+    return await ctx.reply("Not implemented")
 
 # Response Handlers
 async def set_default(
