@@ -1,9 +1,11 @@
 from discord.ext import commands
 from commands.project import project_entry as Project
 from commands.settings import settings_entry as Settings
+from commands.task import task_entry as Task
 
 command_map = {
     "project": Project,
+    "task": Task,
     "settings": Settings,
 }
 
@@ -30,6 +32,10 @@ def register(bot: commands.Bot):
     @bot.command(name=Project.name.lower(), help=Project.help)
     async def project_entry(ctx: commands.Context, *args: str):
         await Project.entry(ctx, *args)
+
+    @bot.command(name=Task.name.lower(), help=Task.help)
+    async def task_entry(ctx: commands.Context, *args: str):
+        await Task.entry(ctx, *args)
 
     @bot.command(name=Settings.name.lower(), help=Settings.help)
     async def settings_entry(ctx: commands.Context, *args: str):

@@ -8,7 +8,9 @@ class Task(Document):
     description: Optional[str] = None
     project: PydanticObjectId
 
-    deadline: datetime
+    owner: PydanticObjectId
+
+    deadline: Optional[datetime]
     completed: bool = False
 
     class Meta:

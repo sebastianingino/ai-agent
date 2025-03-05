@@ -12,6 +12,7 @@ from actions.action import Action, Context
 class ProjectNew(Action):
     name: str
     description: Optional[str] = None
+    deadline: Optional[datetime] = None
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = False
@@ -32,7 +33,10 @@ class ProjectNew(Action):
             return Err(Exception("User not found."))
         try:
             project = Project(
-                name=self.name, owner=ctx.user.id, description=self.description
+                name=self.name,
+                owner=ctx.user.id,
+                description=self.description,
+                deadline=self.deadline,
             )
             project.members.append(ctx.user.id)
             ctx.user.projects.append(project)  # type: ignore
