@@ -1,13 +1,13 @@
 import logging
-from typing import Any, Callable, Coroutine, Dict, Tuple
+from typing import Dict, Tuple
 
 import discord
 
 from model.user import User
-
-AsyncCallable = Callable[..., Coroutine[Any, Any, Any]]
+from util.types import AsyncCallable
 
 LOGGER = logging.getLogger(__name__)
+
 
 class _Reactions:
     handlers: Dict[int, Dict[str, Tuple[AsyncCallable, Tuple]]]
@@ -49,7 +49,9 @@ class _Reactions:
                 and self.use_parent[parent.id]
                 and user.id == parent.author.id
             ):
-                LOGGER.debug(f"Using parent message {parent.id} for reaction {message.id}")
+                LOGGER.debug(
+                    f"Using parent message {parent.id} for reaction {message.id}"
+                )
                 message = parent
             else:
                 LOGGER.debug(f"No handlers for message {message.id}")
@@ -69,7 +71,9 @@ class _Reactions:
             await callback(message, userModel, *args)
             return True
 
-        LOGGER.debug(f"No handler for reaction {reaction.emoji} on message {message.id}")
+        LOGGER.debug(
+            f"No handler for reaction {reaction.emoji} on message {message.id}"
+        )
         return False
 
     def has_handler(self, message: discord.Message):

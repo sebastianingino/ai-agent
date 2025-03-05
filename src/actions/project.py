@@ -330,3 +330,33 @@ class ProjectLeave(Action):
         if result.is_err():
             return Err(f"Failed to leave project {self.name}.")
         return Ok(f"Left project {self.name}.")
+
+
+class ProjectSetDefault(Action):
+    name: str
+
+    effective: ClassVar[bool] = False
+    unsafe: ClassVar[bool] = False
+
+    async def preflight(self, ctx: Context) -> Result[None, None]:
+        for project in ctx.user.projects:
+            if project.name == self.name:  # type: ignore
+                self._memo["project"] = project
+                return Ok(None)
+        return Err(None)
+
+    def preflight_wrap(self, result: Result[None, None]) -> Result[None, str]:
+        if result.is_err():
+            return Err(f"Project {self.name} not found.")
+        return Ok(None)
+
+    async def execute(self, ctx: Context) -> Result[None, None]:
+        project = self._memo["project"]
+        ctx.user.default_project = project
+        await ctx.user.save()
+        return Ok(None)
+
+    def execute_wrap(self, result: Result[None, None]) -> Result[str, str]:
+        if result.is_err():
+            return Err(f"Failed to set project {self.name} as default.")
+        return Ok(f"Project {self.name} set as default.")

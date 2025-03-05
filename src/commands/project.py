@@ -1,3 +1,4 @@
+import functools
 import logging
 
 import discord
@@ -11,14 +12,14 @@ from actions.project import (
     ProjectLeave,
     ProjectList,
     ProjectNew,
+    ProjectSetDefault,
 )
-from mistral import functions
-from reactions import Reactions
 
 from commands.command import command, CommandContext
 from mistral.chat import Chat
 from model.project import Project as ProjectModel
 from model.user import User as UserModel
+from response.ButtonResponse import binary_response
 from util.util import preflight_execute, result_collapse
 
 LOGGER = logging.getLogger(__name__)
@@ -44,9 +45,11 @@ async def project_new(ctx: CommandContext, *args: str):
                 f"Project {name} already exists and is your default project."
             )
 
-        Reactions.register_handler(ctx.message, "✅", set_default, project)
         return await ctx.reply(
-            f"Project {name} already exists. React with ✅ to set the project as your default."
+            f"Project {name} already exists. Do you want to set it as your default project?",
+            view=binary_response(
+                functools.partial(set_default, project, ctx.user), user=ctx.author
+            ),
         )
 
     execute = await action.execute(ctx)
@@ -56,9 +59,11 @@ async def project_new(ctx: CommandContext, *args: str):
         )
 
     project = execute.unwrap()
-    Reactions.register_handler(ctx.message, "✅", set_default, project)
     return await ctx.reply(
-        f"Project {name} created. React with ✅ to set the project as your default."
+        f"Project {name} created. Do you want to set it as your default project?",
+        view=binary_response(
+            functools.partial(set_default, project, ctx.user), user=ctx.author
+        ),
     )
 
 
@@ -99,9 +104,11 @@ async def project_delete(ctx: CommandContext, *args: str):
     if preflight.is_err():
         return await ctx.reply(action.preflight_wrap(preflight).unwrap_err())
 
-    Reactions.register_handler(ctx.message, "✅", delete_project, action)
     return await ctx.reply(
-        f"Are you sure you want to delete project {name}? React with ✅ to confirm."
+        f"Are you sure you want to delete project {name}?",
+        view=binary_response(
+            functools.partial(delete_project, action), user=ctx.author
+        ),
     )
 
 
@@ -114,7 +121,7 @@ async def project_invite(ctx: CommandContext, *args: str):
     users = [user.id for user in ctx.message.mentions]
 
     return await ctx.reply(
-        await preflight_execute(ProjectInvite(name=name, users=users), ctx)
+        await preflight_execute(ProjectInvite(name=name, users=users), ctx),
     )
 
 
@@ -140,13 +147,28 @@ async def project_leave(ctx: CommandContext, *args: str):
     return await ctx.reply(await preflight_execute(ProjectLeave(name=name), ctx))
 
 
-# Reaction Handlers
-async def set_default(message: discord.Message, user: UserModel, project: ProjectModel):
+@command("Default", "Set a default project", parent=project_entry)
+async def project_default(ctx: CommandContext, *args: str):
+    if len(args) < 1:
+        return await ctx.reply("Usage: !project default [name]")
+    name = " ".join(args)
+
+    return await ctx.reply(await preflight_execute(ProjectSetDefault(name=name), ctx))
+
+
+# Response Handlers
+async def set_default(
+    project: ProjectModel, user: UserModel, interaction: discord.Interaction
+):
     user.default_project = project  # type: ignore
     await user.save()
-    await message.reply(f"Project {project.name} set as default.")
+    await interaction.response.send_message(
+        f"Project {project.name} set as default.", ephemeral=True
+    )
 
 
-async def delete_project(message: discord.Message, _: UserModel, action: ProjectDelete):
-    execute = await action.execute(None)  # type: ignore
-    return await message.reply(result_collapse(action.execute_wrap(execute)))
+async def delete_project(action: ProjectDelete, interaction: discord.Interaction):
+    result = await action.execute(None)  # type: ignore
+    return await interaction.response.send_message(
+        result_collapse(action.execute_wrap(result)), ephemeral=True
+    )
