@@ -3,6 +3,7 @@
         "audioop",
         "chunkify",
         "dotenv",
+        "Embedder",
         "mistralai",
         "mockbot",
         "preflighted"

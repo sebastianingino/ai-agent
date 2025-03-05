@@ -13,6 +13,10 @@ dependencies = [
     "beanie>=1.29.0",
     "coloredlogs>=15.0.1",
     "result>=0.17.0",
+    "langchain>=0.3.20",
+    "pypdf>=5.3.1",
+    "validators>=0.34.0",
+    "markdownify>=1.1.0",
 ]
 
 [tool.setuptools]
