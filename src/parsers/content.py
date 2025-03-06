@@ -109,9 +109,8 @@ Content = TypedDict(
 )
 
 
-async def from_message(message: discord.Message) -> Result[Content, Exception]:
+async def from_message(message: discord.Message, content: str) -> Result[Content, Exception]:
     try:
-        content = message.content
         urls = re.findall(r"(https?://\S+)", content)
         urls.extend((embed.url for embed in message.embeds if embed.url))
         content_without_urls = re.sub(r"(https?://\S+)", "", content)

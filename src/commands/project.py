@@ -160,9 +160,15 @@ async def project_default(ctx: CommandContext, *args: str):
 
 @command("Import", "Import a project from another service", parent=project_entry)
 async def project_import(ctx: CommandContext, *args: str):
-    content = await content_parser.from_message(ctx.message)
-    print(content)
-    return await ctx.reply("Not implemented")
+    content_result = await content_parser.from_message(ctx.message, " ".join(args))
+    if content_result.is_err():
+        return await ctx.reply(
+            f"Failed to parse content: {content_result.unwrap_err()}"
+        )
+    content = content_result.unwrap()
+    tasks = functions.import_project(content)
+    print(tasks)
+    return await ctx.reply("Imported project")
 
 # Response Handlers
 async def set_default(

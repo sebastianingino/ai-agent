@@ -1,8 +1,11 @@
+import base64
 from datetime import datetime, timedelta
+from typing import List, Optional
 from pydantic import BaseModel
 from result import as_result
 
 from mistral.chat import Chat
+from parsers import content as content_parser
 
 
 @as_result(Exception)
@@ -68,3 +71,55 @@ def datetime_to_when(dt: datetime) -> str:
         return response.choices[0].message.parsed.when
 
     raise ValueError("Failed to convert datetime to 'when'")
+
+
+@as_result(Exception)
+def import_project(content: content_parser.Content):
+    class Task(BaseModel):
+        name: str
+        description: Optional[str]
+        deadline: Optional[str]
+
+    class Project(BaseModel):
+        name: str
+        description: Optional[str]
+        tasks: List[Task]
+        deadline: Optional[str]
+
+    user_content = [{"type": "text", "text": content["content"]}]
+    for test_attachment in content["text_attachments"]:
+        user_content.append({"type": "text", "text": test_attachment})
+    for image_attachment in content["image_attachments"]:
+        user_content.append(
+            {
+                "type": "image_url",
+                "image_url": f"data:image/png;base64,{base64.b64encode(image_attachment).decode()}",
+            }
+        )
+
+    client = Chat.client
+    response = client.chat.parse(
+        model="mistral-small-latest",
+        messages=[
+            {
+                "role": "system",
+                "content": f"""
+                You are given a specification for a project. You need to create a project with the given name, description, deadline, and tasks. Note that there may be extraneous information in the specification.
+                If no project can be determined, return an empty object.
+                For all deadline fields, use ISO-format datetimes strings if applicable. The current datetime is {datetime.now().isoformat()}.
+                """,
+            },
+            {"role": "user", "content": user_content},
+        ],
+        response_format=Project,
+    )
+
+
+    if (
+        response.choices
+        and response.choices[0].message
+        and response.choices[0].message.parsed
+    ):
+        return response.choices[0].message.parsed
+
+    raise ValueError("Failed to import project")
