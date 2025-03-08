@@ -29,13 +29,29 @@ load_dotenv()
 # The message content and members intent must be enabled in the Discord Developer Portal for the bot to work.
 intents = discord.Intents.all()
 
-bot: commands.Bot
+
+class Bot(commands.Bot):
+    async def on_command_error(
+        self, context: commands.Context, exception: commands.CommandError
+    ) -> None:
+        if isinstance(exception, commands.CommandNotFound):
+            await context.reply(
+                "Sorry, I don't recognize that command. Try `!help` for a list of commands."
+            )
+        else:
+            await context.reply(
+                f"Sorry, something went wrong! {exception}", ephemeral=True
+            )
+
+
+bot: Bot
 environment = os.getenv("ENVIRONMENT")
 if environment == "DEV":
     from test.mockbot import MockBot
+
     bot = MockBot(command_prefix=PREFIX, intents=intents)  # type: ignore
 else:
-    bot = commands.Bot(command_prefix=PREFIX, intents=intents)
+    bot = Bot(command_prefix=PREFIX, intents=intents)
 
 
 @bot.event
@@ -56,6 +72,10 @@ async def on_message(message: discord.Message):
 
     https://discordpy.readthedocs.io/en/latest/api.html#discord.on_message
     """
+    # Ignore messages to the Admin Bot
+    if message.content.startswith("."):
+        return
+
     if not message.author.bot or message.content.startswith("!"):
         LOGGER.info(f"Processing message from {message.author}: {message.content}")
 
@@ -69,7 +89,9 @@ async def on_message(message: discord.Message):
     # Get the context of the message
     context = await messages.context(message)
     # Ignore threads/messages that haven't included the bot in the past 200 messages
-    if not await messages.bot_included(context) and not await messages.is_bot_dm(message):
+    if not await messages.bot_included(context) and not await messages.is_bot_dm(
+        message
+    ):
         return
 
     async with message.channel.typing():
@@ -108,6 +130,7 @@ async def ping(ctx, *, arg=None):
         await ctx.reply("Pong!")
     else:
         await ctx.reply(f"Pong! Your argument was {arg}")
+
 
 async def main():
     # Connect to MongoDB

@@ -25,7 +25,6 @@ Use the `help` command to get help with a specific command (e.g. `!help project`
     async def send_command_help(self, command):
         await self.context.reply(command_map[command.name.lower()].helptext())
 
-
 def register(bot: commands.Bot):
     bot.help_command = Help()
 
@@ -44,3 +43,5 @@ def register(bot: commands.Bot):
     @bot.command(name="reset", help="Resets the bot's state.")
     async def reset(ctx: commands.Context):
         await ctx.reply("Bot state reset.")
+
+    

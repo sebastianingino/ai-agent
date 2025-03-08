@@ -51,6 +51,18 @@ class TaskNew(Action):
         except Exception as e:
             return Err(e)
 
+    def execute_wrap(self, result: Result[Task, Exception]) -> Result[str, str]:
+        if result.is_err():
+            return Err(f"Error creating task: {result.unwrap_err()}")
+        return Ok(f"Task {result.unwrap().name} created.")
+
+    def __str__(self) -> str:
+        if self.deadline:
+            when = functions.datetime_to_when(self.deadline).unwrap_or(None)
+        else:
+            when = None
+        return f"**New task**: {self.name}{f" - {self.description}" if self.description else ''}{f" *(due {when})*" if when else ''}"
+
 
 class TaskMark(Action):
     task_id: PydanticObjectId
@@ -85,6 +97,16 @@ class TaskMark(Action):
             return Ok(task)
         except Exception as e:
             return Err(e)
+
+    def execute_wrap(self, result: Result[Task, Exception]) -> Result[str, str]:
+        if result.is_err():
+            return Err(f"Error marking task: {result.unwrap_err()}")
+        return Ok(
+            f"Task {result.unwrap().name} marked as {'completed' if self.status else 'incomplete'}."
+        )
+
+    def __str__(self) -> str:
+        return f"**Mark task** as {'completed' if self.status else 'incomplete'}"
 
 
 class TaskDelete(Action):
@@ -125,6 +147,9 @@ class TaskDelete(Action):
             return Err(f"Error deleting task: {result.unwrap_err()}")
         return Ok(f"Task {result.unwrap().name} deleted.")
 
+    def __str__(self) -> str:
+        return "**Delete task**"
+
 
 class TaskList(Action):
     project: str
@@ -154,6 +179,14 @@ class TaskList(Action):
             tasks.append(f"- {"✅" if task.completed else ""} {task.name} ({deadline})")
 
         return Ok("**Tasks for {self.project}**:\n" + "\n".join(tasks))
+
+    def execute_wrap(self, result: Result[str, Exception]) -> Result[str, str]:
+        if result.is_err():
+            return Err(f"Error listing tasks: {result.unwrap_err()}")
+        return Ok(result.unwrap())
+
+    def __str__(self) -> str:
+        return f"**List tasks** for {self.project}"
 
 
 class TaskDeadline(Action):
@@ -213,3 +246,6 @@ class TaskDeadline(Action):
         return Ok(
             f"Changed deadline for {task.name} from {previous_deadline_text} to {self.when}"
         )
+
+    def __str__(self) -> str:
+        return f"**Set deadline** to {self.when}"

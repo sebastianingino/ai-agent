@@ -2,8 +2,11 @@
     "cSpell.words": [
         "audioop",
         "chunkify",
+        "discoin",
         "dotenv",
         "Embedder",
+        "levelname",
+        "markdownify",
         "mistralai",
         "mockbot",
         "preflighted"

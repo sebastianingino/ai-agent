@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Annotated, Any, ClassVar, Dict, Union
+from typing import Any, ClassVar, Dict, Union
 import discord.ext.commands
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from result import Result
 
 from commands.command import CommandContext
@@ -12,7 +12,7 @@ from model.user import User
 @dataclass
 class ActionContext:
     user: User
-    bot: discord.ext.commands.Bot
+    bot: discord.Client
 
 
 Context = Union[ActionContext, CommandContext]
@@ -61,4 +61,8 @@ class Action(ABC, BaseModel):
 
     @abstractmethod
     def execute_wrap(self, result: Result[Any, Any]) -> Result[str, str]:
+        pass
+    
+    @abstractmethod
+    def __str__(self) -> str:
         pass

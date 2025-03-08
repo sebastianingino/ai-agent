@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from io import BytesIO
+import logging
 import re
 from typing import Dict, List, TypedDict, Union
 
@@ -14,6 +15,7 @@ from markdownify import markdownify as md
 
 PLAINTEXT_FORMATS = ["text/markdown", "text/plain", "application/xml"]
 IMAGE_FORMATS = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"]
+LOGGER = logging.getLogger(__name__)
 
 
 class ContentRetriever:
@@ -23,6 +25,9 @@ class ContentRetriever:
     class MimeType:
         type: str
         parameters: Dict[str, str]
+
+        def __str__(self) -> str:
+            return f"MimeType(type={self.type}, parameters={self.parameters})"
 
     content_type: ContentType
     content: Union[str, discord.Attachment]
@@ -109,7 +114,9 @@ Content = TypedDict(
 )
 
 
-async def from_message(message: discord.Message, content: str) -> Result[Content, Exception]:
+async def from_message(
+    message: discord.Message, content: str
+) -> Result[Content, Exception]:
     try:
         urls = re.findall(r"(https?://\S+)", content)
         urls.extend((embed.url for embed in message.embeds if embed.url))

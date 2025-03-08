@@ -30,3 +30,6 @@ class SettingsDefaultProject(Action):
     
     def execute_wrap(self, result: Result[str, str]) -> Result[str, str]:
         return result
+
+    def __str__(self) -> str:
+        return f"**Set default project** to {self.name}"

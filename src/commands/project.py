@@ -1,8 +1,10 @@
 import functools
 import logging
+from typing import List
 
 import discord
 
+from actions.action import Action, ActionContext
 from actions.project import (
     ProjectDeadline,
     ProjectDelete,
@@ -16,7 +18,7 @@ from actions.project import (
 )
 
 from commands.command import command, CommandContext
-from mistral import functions
+from mistral import parsers
 from mistral.chat import Chat
 from model.project import Project as ProjectModel
 from model.user import User as UserModel
@@ -29,7 +31,9 @@ LOGGER = logging.getLogger(__name__)
 
 @command("Project", "Manage your projects")
 async def project_entry(ctx: CommandContext, *args: str):
-    await ctx.reply(await Chat.help(ctx.command_stack[-1].helptext() or ""))
+    if len(args) > 0:
+        return await ctx.reply("Usage: !project")
+    return await ctx.reply(await Chat.help(ctx.command_stack[-1].helptext() or ""))
 
 
 @command("New", "Create a new project", parent=project_entry)
@@ -138,7 +142,7 @@ async def project_invite(ctx: CommandContext, *args: str):
 async def project_kick(ctx: CommandContext, *args: str):
     if len(args) < 1:
         return await ctx.reply("Usage: !project kick [name] [users]")
-    
+
     if len(ctx.message.mentions) < 1:
         return await ctx.reply("Usage: !project kick [name] [users]")
 
@@ -171,7 +175,11 @@ async def project_default(ctx: CommandContext, *args: str):
     return await ctx.reply(await preflight_execute(ProjectSetDefault(name=name), ctx))
 
 
-@command("Import", "Import a project from another service", parent=project_entry)
+@command(
+    "Import",
+    "Import a project from text, images, documents, and links",
+    parent=project_entry,
+)
 async def project_import(ctx: CommandContext, *args: str):
     content_result = await content_parser.from_message(ctx.message, " ".join(args))
     if content_result.is_err():
@@ -179,9 +187,29 @@ async def project_import(ctx: CommandContext, *args: str):
             f"Failed to parse content: {content_result.unwrap_err()}"
         )
     content = content_result.unwrap()
-    tasks = functions.import_project(content)
-    print(tasks)
-    return await ctx.reply("Imported project")
+    async with ctx.message.channel.typing():
+        tasks = parsers.import_project(content)
+    if tasks.is_err():
+        return await ctx.reply(
+            "Looks like there was an error importing the project. Please try again."
+        )
+
+    response = """
+Are you sure you want to import this project?
+This will create a new project with the following actions:
+    """.strip()
+
+    for action in tasks.unwrap():
+        response += f"\n- {str(action)}{' ❗️' if action.unsafe else ''}"
+
+    actions = tasks.unwrap()
+    return await ctx.reply(
+        response,
+        view=binary_response(
+            functools.partial(apply_actions, actions), user=ctx.author
+        ),
+    )
+
 
 # Response Handlers
 async def set_default(
@@ -198,4 +226,29 @@ async def delete_project(action: ProjectDelete, interaction: discord.Interaction
     result = await action.execute(None)  # type: ignore
     return await interaction.response.send_message(
         result_collapse(action.execute_wrap(result)), ephemeral=True
+    )
+
+
+async def apply_actions(actions: List[Action], interaction: discord.Interaction):
+    user = await UserModel.find_one(
+        UserModel.discord_id == interaction.user.id, fetch_links=True
+    )
+    if user is None:
+        user = UserModel(discord_id=interaction.user.id)
+        await user.insert()
+
+    context = ActionContext(user=user, bot=interaction.client)
+    for action in actions:
+        preflight = await action.preflight(context)
+        if preflight.is_err():
+            return await interaction.response.send_message(
+                f"Error importing project: failed preflight on step {str(action)}: {preflight.unwrap_err()}",
+            )
+        result = await action.execute(context)
+        if result.is_err():
+            return await interaction.response.send_message(
+                f"Error importing project: failed execution on step {str(action)}: {result.unwrap_err()}",
+            )
+    return await interaction.response.send_message(
+        "Project imported successfully.", ephemeral=True
     )

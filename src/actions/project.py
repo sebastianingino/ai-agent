@@ -51,6 +51,13 @@ class ProjectNew(Action):
             return Err("Failed to create project.")
         return Ok(f"Project {self.name} created.")
 
+    def __str__(self) -> str:
+        if self.deadline:
+            when = functions.datetime_to_when(self.deadline).unwrap_or(None)
+        else:
+            when = None
+        return f"**New project**: {self.name}{f' - {self.description}' if self.description else ''}{f' *(due {when})*' if when else ''}"
+
 
 class ProjectList(Action):
     effective: ClassVar[bool] = False
@@ -77,6 +84,9 @@ class ProjectList(Action):
         if result.is_err():
             return Err("Failed to list projects.")
         return Ok(result.unwrap())
+
+    def __str__(self) -> str:
+        return "**List projects**"
 
 
 class ProjectInfo(Action):
@@ -122,6 +132,9 @@ class ProjectInfo(Action):
         if result.is_err():
             return Err(f"Failed to get info for project {self.name}")
         return Ok(result.unwrap())
+
+    def __str__(self) -> str:
+        return f"**Info** for project {self.name}"
 
 
 class ProjectDeadline(Action):
@@ -174,6 +187,9 @@ class ProjectDeadline(Action):
             f"Changed deadline for project {project.name} from {previous_deadline_text} to {self.when}."
         )
 
+    def __str__(self) -> str:
+        return f"**Set Deadline** for project to {self.when}"
+
 
 class ProjectDelete(Action):
     name: str
@@ -204,6 +220,9 @@ class ProjectDelete(Action):
         if result.is_err():
             return Err(f"Failed to delete project {self.name}.")
         return Ok(f"Project {self.name} deleted.")
+
+    def __str__(self) -> str:
+        return f"**Delete project** {self.name}"
 
 
 class ProjectInvite(Action):
@@ -253,6 +272,9 @@ class ProjectInvite(Action):
             f"User{'s' if len(self.users) > 1 else ''} {', '.join(user.mention for user in result.unwrap())} added to project {self.name}."
         )
 
+    def __str__(self) -> str:
+        return f"**Invite users** to project {self.name}"
+
 
 class ProjectKick(Action):
     name: str
@@ -301,6 +323,9 @@ class ProjectKick(Action):
             f"User{'s' if len(self.users) > 1 else ''} {', '.join(user.mention for user in result.unwrap())} removed from project {self.name}."
         )
 
+    def __str__(self) -> str:
+        return f"**Kick users** from project {self.name}"
+
 
 class ProjectLeave(Action):
     name: str
@@ -339,6 +364,9 @@ class ProjectLeave(Action):
             return Err(f"Failed to leave project {self.name}.")
         return Ok(f"Left project {self.name}.")
 
+    def __str__(self) -> str:
+        return f"**Leave project** {self.name}"
+
 
 class ProjectSetDefault(Action):
     name: str
@@ -368,3 +396,6 @@ class ProjectSetDefault(Action):
         if result.is_err():
             return Err(f"Failed to set project {self.name} as default.")
         return Ok(f"Project {self.name} set as default.")
+
+    def __str__(self) -> str:
+        return f"Set project {self.name} as default"
