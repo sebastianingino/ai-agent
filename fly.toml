@@ -1,4 +1,4 @@
-app = "kubot"
+app = "discoin"
 primary_region = "lax"
 
 [build]

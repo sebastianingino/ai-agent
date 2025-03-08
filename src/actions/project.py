@@ -235,8 +235,10 @@ class ProjectInvite(Action):
             if not user_model:
                 user_model = User(discord_id=user)
                 await user_model.insert()
-            project.members.append(user_model.id)
-            user_model.projects.append(project)
+            if user_model.id not in project.members:
+                project.members.append(user_model.id)
+            if project not in user_model.projects:
+                user_model.projects.append(project)
             await user_model.save()
             if mention := ctx.bot.get_user(user):
                 mentions.append(mention)
@@ -281,8 +283,10 @@ class ProjectKick(Action):
             if not user_model:
                 user_model = User(discord_id=user)
                 await user_model.insert()
-            project.members.remove(user_model.id)
-            user_model.projects.remove(project)
+            if user_model.id in project.members:
+                project.members.remove(user_model.id)
+            if project in user_model.projects:
+                user_model.projects.remove(project)
             await user_model.save()
             if mention := ctx.bot.get_user(user):
                 mentions.append(mention)

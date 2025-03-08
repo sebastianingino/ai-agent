@@ -120,6 +120,13 @@ async def project_invite(ctx: CommandContext, *args: str):
         return await ctx.reply("Usage: !project invite [name] [users]")
 
     name = " ".join(args for args in args if not args.startswith("<@"))
+
+    if len(name.strip()) == 0:
+        return await ctx.reply("Usage: !project invite [name] [users]")
+
+    if len(ctx.message.mentions) < 1:
+        return await ctx.reply("Usage: !project invite [name] [users]")
+
     users = [user.id for user in ctx.message.mentions]
 
     return await ctx.reply(
@@ -131,8 +138,14 @@ async def project_invite(ctx: CommandContext, *args: str):
 async def project_kick(ctx: CommandContext, *args: str):
     if len(args) < 1:
         return await ctx.reply("Usage: !project kick [name] [users]")
+    
+    if len(ctx.message.mentions) < 1:
+        return await ctx.reply("Usage: !project kick [name] [users]")
 
     name = " ".join(args for args in args if not args.startswith("<@"))
+    if len(name.strip()) == 0:
+        return await ctx.reply("Usage: !project kick [name] [users]")
+
     users = [user.id for user in ctx.message.mentions]
 
     return await ctx.reply(
