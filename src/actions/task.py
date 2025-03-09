@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import ClassVar, Optional
 
-from beanie import PydanticObjectId
 from result import Err, Ok, Result
 from actions.action import Action, Context
 from mistral import functions
@@ -11,7 +10,7 @@ from model.task import Task
 
 class TaskNew(Action):
     name: str
-    project: str
+    project: Optional[str] = None
 
     description: Optional[str] = None
     deadline: Optional[datetime] = None
@@ -20,8 +19,14 @@ class TaskNew(Action):
     unsafe: ClassVar[bool] = False
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
+        if not self.project:
+            if not ctx.user.default_project:
+                return Err(None)
+            self._memo["project"] = ctx.user.default_project
+            return Ok(None)
+
         for project in ctx.user.projects:
-            if project.name == self.project:  # type: ignore
+            if project.name.lower() == self.project.lower():  # type: ignore
                 self._memo["project"] = project
                 return Ok(None)
         return Err(None)
@@ -65,24 +70,32 @@ class TaskNew(Action):
 
 
 class TaskMark(Action):
-    task_id: PydanticObjectId
+    task: str
     status: bool
+    project: Optional[str]
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = False
 
     async def preflight(self, ctx: Context) -> Result[Task, str]:
-        task = await Task.get(self.task_id)
-        if not task:
-            return Err(f"Task {self.task_id} not found.")
-        if task.owner != ctx.user.id:
-            project = await Project.get(task.project)
-            if not project:
-                return Err(f"Task {self.task_id} not found.")
-            if ctx.user.id not in project.members:
-                return Err(f"Task {self.task_id} not found.")
-        self._memo["task"] = task
-        return Ok(task)
+        project = None
+        if not self.project:
+            if not ctx.user.default_project:
+                return Err("Default project not found.")
+            project = ctx.user.default_project
+        else:
+            for p in ctx.user.projects:
+                if p.name == self.project:  # type: ignore
+                    project = project
+
+        if not project:
+            return Err("Project not found.")
+
+        for task in project.tasks:  # type: ignore
+            if task.name.lower() == self.task.lower():
+                self._memo["task"] = task
+                return Ok(task)
+        return Err(f"Task {self.task} not found.")
 
     def preflight_wrap(self, result: Result[Task, str]) -> Result[None, str]:
         if result.is_err():
@@ -110,24 +123,31 @@ class TaskMark(Action):
 
 
 class TaskDelete(Action):
-    task_id: PydanticObjectId
+    task: str
+    project: Optional[str]
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = True
 
     async def preflight(self, ctx: Context) -> Result[Task, str]:
-        task = await Task.get(self.task_id)
+        project = None
+        if not self.project:
+            if not ctx.user.default_project:
+                return Err("Default project not found.")
+            project = ctx.user.default_project
+        else:
+            for p in ctx.user.projects:
+                if p.name == self.project:  # type: ignore
+                    project = project
 
-        if not task:
-            return Err(f"Task {self.task_id} not found.")
-        if task.owner != ctx.user.id:
-            project = await Project.get(task.project)
-            if not project:
-                return Err(f"Task {self.task_id} not found.")
-            if ctx.user.id not in project.members:
-                return Err(f"Task {self.task_id} not found.")
-        self._memo["task"] = task
-        return Ok(task)
+        if not project:
+            return Err("Project not found.")
+
+        for task in project.tasks:  # type: ignore
+            if task.name.lower() == self.task.lower():
+                self._memo["task"] = task
+                return Ok(task)
+        return Err(f"Task {self.task} not found.")
 
     def preflight_wrap(self, result: Result[Task, str]) -> Result[None, str]:
         if result.is_err():
@@ -152,14 +172,19 @@ class TaskDelete(Action):
 
 
 class TaskList(Action):
-    project: str
+    project: Optional[str] = None
 
     effective: ClassVar[bool] = False
     unsafe: ClassVar[bool] = False
 
     async def preflight(self, ctx: Context) -> Result[None, str]:
+        if not self.project:
+            if not ctx.user.default_project:
+                return Err("Default project not found.")
+            self._memo["project"] = ctx.user.default_project
+            return Ok(None)
         for project in ctx.user.projects:
-            if project.name == self.project:  # type: ignore
+            if project.name.lower() == self.project.lower():  # type: ignore
                 self._memo["project"] = project
                 return Ok(None)
         return Err(f"Project {self.project} not found.")
@@ -170,15 +195,16 @@ class TaskList(Action):
         return Ok(None)
 
     async def execute(self, ctx: Context) -> Result[str, Exception]:
-        if len(self._memo["project"].tasks) == 0:
-            return Ok("No tasks found.")
+        project = self._memo["project"]
+        if len(project.tasks) == 0:
+            return Ok(f"No tasks found for {project.name}.")
         tasks = []
-        for task in self._memo["project"].tasks:
+        for task in project.tasks:
             when = functions.datetime_to_when(task.deadline)
             deadline = when.unwrap_or(task.deadline.strftime("%Y-%m-%d %H:%M"))
             tasks.append(f"- {"✅" if task.completed else ""} {task.name} ({deadline})")
 
-        return Ok("**Tasks for {self.project}**:\n" + "\n".join(tasks))
+        return Ok(f"**Tasks for {project.name}**:\n" + "\n".join(tasks))
 
     def execute_wrap(self, result: Result[str, Exception]) -> Result[str, str]:
         if result.is_err():
@@ -190,8 +216,9 @@ class TaskList(Action):
 
 
 class TaskDeadline(Action):
-    task_id: PydanticObjectId
+    task: str
     when: str
+    project: Optional[str] = None
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = False
@@ -201,17 +228,25 @@ class TaskDeadline(Action):
         if datetime.is_err():
             return Err(f"Failed to parse date: {datetime.unwrap_err()}")
         self._memo["datetime"] = datetime.unwrap()
-        task = await Task.get(self.task_id)
-        if not task:
-            return Err(f"Task {self.task_id} not found.")
-        if task.owner != ctx.user.id:
-            project = await Project.get(task.project)
-            if not project:
-                return Err(f"Task {self.task_id} not found.")
-            if ctx.user.id not in project.members:
-                return Err(f"Task {self.task_id} not found.")
-        self._memo["task"] = task
-        return Ok(task)
+
+        project = None
+        if not self.project:
+            if not ctx.user.default_project:
+                return Err("Default project not found.")
+            project = ctx.user.default_project
+        else:
+            for p in ctx.user.projects:
+                if p.name == self.project:  # type: ignore
+                    project = project
+
+        if not project:
+            return Err("Project not found.")
+
+        for task in project.tasks:  # type: ignore
+            if task.name.lower() == self.task.lower():
+                self._memo["task"] = task
+                return Ok(task)
+        return Err(f"Task {self.task} not found.")
 
     def preflight_wrap(self, result: Result[Task, str]) -> Result[None, str]:
         if result.is_err():
@@ -249,3 +284,41 @@ class TaskDeadline(Action):
 
     def __str__(self) -> str:
         return f"**Set deadline** to {self.when}"
+
+
+class TaskListAll(Action):
+    effective: ClassVar[bool] = False
+    unsafe: ClassVar[bool] = False
+
+    async def preflight(self, ctx: Context) -> Result[None, str]:
+        return Ok(None)
+
+    def preflight_wrap(self, result: Result[None, str]) -> Result[None, str]:
+        if result.is_err():
+            return Err(result.unwrap_err())
+        return Ok(None)
+
+    async def execute(self, ctx: Context) -> Result[str, Exception]:
+        tasks = await Task.find(Task.owner == ctx.user.id).to_list()
+        if len(tasks) == 0:
+            return Ok("No tasks found.")
+        result = []
+        for task in tasks:
+            if task.deadline:
+                when = functions.datetime_to_when(task.deadline)
+                deadline = when.unwrap_or(task.deadline.strftime("%Y-%m-%d %H:%M"))
+                result.append(
+                    f"- {"✅" if task.completed else ""} {task.name} ({deadline})"
+                )
+            else:
+                result.append(f"- {"✅" if task.completed else ""} {task.name}")
+
+        return Ok("**All Tasks**:\n" + "\n".join(result))
+
+    def execute_wrap(self, result: Result[str, Exception]) -> Result[str, str]:
+        if result.is_err():
+            return Err(f"Error listing tasks: {result.unwrap_err()}")
+        return Ok(result.unwrap())
+
+    def __str__(self) -> str:
+        return "**List all tasks**"

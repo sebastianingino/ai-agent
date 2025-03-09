@@ -99,7 +99,7 @@ async def project_deadline(ctx: CommandContext, *args: str):
         return await ctx.reply("Usage: `!project deadline [when] -p [project]`")
 
     parser = ArgParser()
-    parser.add_argument("-p", "--project")
+    parser.add_argument("project", "p")
 
     when = parser.parse(args)
     return await ctx.reply(

@@ -19,7 +19,7 @@ class ProjectNew(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, Project]:
         for project in ctx.user.projects:
-            if project.name == self.name:  # type: ignore
+            if project.name.lower() == self.name.lower():  # type: ignore
                 return Err(project)  # type: ignore
         return Ok(None)
 
@@ -97,7 +97,7 @@ class ProjectInfo(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
         for project in ctx.user.projects:
-            if project.name == self.name:  # type: ignore
+            if project.name.lower() == self.name.lower():  # type: ignore
                 owner = await User.find_one(User.id == project.owner)  # type: ignore
                 if not owner:
                     return Err(None)
@@ -152,7 +152,7 @@ class ProjectDeadline(Action):
 
         if self.project:
             for project in ctx.user.projects:
-                if project.name == self.project:  # type: ignore
+                if project.name.lower() == self.project.lower():  # type: ignore
                     self._memo["project"] = project
                     return Ok(None)
             return Err(f"Project {self.project} not found.")
@@ -202,7 +202,7 @@ class ProjectDelete(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
         project = await Project.find_one(
-            Project.name == self.name, Project.owner == ctx.user.id
+            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id
         )
         if not project:
             return Err(None)
@@ -237,7 +237,7 @@ class ProjectInvite(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
         project = await Project.find_one(
-            Project.name == self.name, Project.owner == ctx.user.id
+            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id
         )
         if not project:
             return Err(None)
@@ -288,7 +288,7 @@ class ProjectKick(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
         project = await Project.find_one(
-            Project.name == self.name, Project.owner == ctx.user.id
+            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id
         )
         if not project:
             return Err(None)
@@ -339,7 +339,7 @@ class ProjectLeave(Action):
     async def preflight(self, ctx: Context) -> Result[None, str]:
         for project in ctx.user.projects:
             print(project)
-            if project.name == self.name:  # type: ignore
+            if project.name.lower() == self.name.lower():  # type: ignore
                 if project.owner == ctx.user.id:  # type: ignore
                     return Err(
                         "Sorry, you can't leave a project you own. Use `!project delete` instead."
@@ -379,7 +379,7 @@ class ProjectSetDefault(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
         for project in ctx.user.projects:
-            if project.name == self.name:  # type: ignore
+            if project.name.lower() == self.name.lower():  # type: ignore
                 self._memo["project"] = project
                 return Ok(None)
         return Err(None)
