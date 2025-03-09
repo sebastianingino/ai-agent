@@ -5,6 +5,7 @@ from mistral.chat import Chat
 
 MISTRAL_MODEL = "mistral-small-latest"
 
+
 @as_result(Exception)
 def when_to_datetime(when: str) -> datetime:
     """Converts natural language "when" to a datetime"""

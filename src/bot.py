@@ -75,6 +75,9 @@ async def on_message(message: discord.Message):
     # Ignore messages to the Admin Bot
     if message.content.startswith("."):
         return
+    
+    if message.author.name != "sebastianingino":
+        return
 
     if not message.author.bot or message.content.startswith("!"):
         LOGGER.info(f"Processing message from {message.author}: {message.content}")

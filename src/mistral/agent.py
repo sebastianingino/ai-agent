@@ -1,13 +1,48 @@
 import os
-from typing import List
-from mistralai import Mistral, SystemMessage, UserMessage
 import discord
+from typing import List, Optional
+from mistralai import Mistral, SystemMessage, UserMessage
+from datetime import datetime
+from pydantic import BaseModel
 
+from model.user import User
 from util.messages import context_to_prompt
 
 MISTRAL_MODEL = "mistral-small-latest"
-SYSTEM_PROMPT = "You are a helpful and friendly project manager assistant."
+SYSTEM_PROMPT = """You are a helpful and friendly project manager assistant. You help users manage their projects and tasks. 
+You have access to all the information about the user and their projects. You can also perform actions on the user's behalf.
+You can create, update, and delete tasks and projects. You can also mark tasks as completed or not completed.
+You can also set deadlines for tasks and projects. You can't invite or kick people from projects, but you can tell them to do so if needed using the `!project invite` and `!project kick` commands.
+Please keep responses relevant to the user's projects and tasks, and avoid discussing unrelated topics. Keep responses short and concise.
+If you don't know the answer, say "I don't know" or "I can't help with that".
+You can also ask the user for more information if needed.
+Please use relative dates when possible, e.g. "tomorrow", "this Thursday", "next week", etc. If something is further away, use absolute dates and times. You may omit the time if it's not relevant.
+"""
 ERROR_RESPONSE = "Looks like something went wrong. Please try again later."
+
+
+class TaskObject(BaseModel):
+    name: str
+    completed: bool
+    description: Optional[str] = None
+
+    deadline: Optional[datetime] = None
+
+
+class ProjectObject(BaseModel):
+    name: str
+    is_owner: bool
+    description: Optional[str] = None
+
+    deadline: Optional[datetime] = None
+
+    tasks: List[TaskObject] = []
+
+
+class UserObject(BaseModel):
+    default_project: Optional[str]
+    projects: List[ProjectObject]
+
 
 class AgentModel:
     def __init__(self):
@@ -15,25 +50,50 @@ class AgentModel:
 
         self.client = Mistral(api_key=MISTRAL_API_KEY)
 
-    async def run(self, message: discord.Message):
-        # The simplest form of an agent
-        # Send the message's content to Mistral's API and return Mistral's response
-
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": message.content},
-        ]
-
-        response = await self.client.chat.complete_async(
-            model=MISTRAL_MODEL,
-            messages=messages,
+    async def get_user_status(self, user: User) -> str:
+        user_object = UserObject(
+            default_project=user.default_project.name if user.default_project else None,  # type: ignore
+            projects=[],
         )
 
-        return response.choices[0].message.content
-    
-    async def handle(self, messages: discord.Message, context: List[discord.Message]) -> str:
+        for project in user.projects:
+            project_object = ProjectObject(
+                name=project.name,  # type: ignore
+                description=project.description,  # type: ignore
+                is_owner=project.owner == user.id,  # type: ignore
+                deadline=project.deadline,  # type: ignore
+                tasks=[],
+            )
+
+            for task in project.tasks:  # type: ignore
+                task_object = TaskObject(
+                    name=task.name,
+                    description=task.description,
+                    completed=task.completed,
+                    deadline=task.deadline,
+                )
+                project_object.tasks.append(task_object)
+
+            user_object.projects.append(project_object)
+
+        return user_object.model_dump_json()
+
+    async def handle(
+        self, messages: discord.Message, context: List[discord.Message]
+    ) -> str:
         prompt = await context_to_prompt(context)
-        prompt.insert(0, SystemMessage(content=SYSTEM_PROMPT))
+        prompt.append(SystemMessage(content=SYSTEM_PROMPT))
+
+        user = await User.find_one(
+            User.discord_id == messages.author.id, fetch_links=True
+        )
+        if not user:
+            user = User(discord_id=messages.author.id)
+            await user.insert()
+        prompt.append(
+            SystemMessage(content=f"User status: \n{await self.get_user_status(user)}")
+        )
+        prompt.append(SystemMessage(content=f"The current datetime is {datetime.now().isoformat()}"))
         prompt.append(UserMessage(content=messages.content))
 
         response = await self.client.chat.complete_async(
