@@ -203,9 +203,11 @@ class TaskList(Action):
             if task.deadline:
                 when = functions.datetime_to_when(task.deadline)
                 deadline = when.unwrap_or(task.deadline.strftime("%Y-%m-%d %H:%M"))
+                tasks.append(
+                    f"- {"✅" if task.completed else ""} {task.name} ({deadline})"
+                )
             else:
-                deadline = "No deadline"
-            tasks.append(f"- {"✅" if task.completed else ""} {task.name} ({deadline})")
+                tasks.append(f"- {"✅" if task.completed else ""} {task.name}")
 
         return Ok(f"**Tasks for {project.name}**:\n" + "\n".join(tasks))
 
