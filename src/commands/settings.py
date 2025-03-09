@@ -7,7 +7,7 @@ from util.util import preflight_execute
 @command("Settings", "User settings")
 async def settings_entry(ctx: CommandContext, *args: str):
     if len(args) > 0:
-        return await ctx.reply("Usage: !settings [command]")
+        return await ctx.reply("Sorry, I don't understand that command. Use `!settings help` to see a list of available commands.")
     return await ctx.reply(await Chat.help(ctx.command_stack[-1].helptext() or ""))
 
 

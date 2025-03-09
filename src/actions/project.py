@@ -138,7 +138,7 @@ class ProjectInfo(Action):
 
 
 class ProjectDeadline(Action):
-    project_id: Optional[int] = None
+    project: Optional[str]
     when: str
 
     effective: ClassVar[bool] = True
@@ -150,13 +150,16 @@ class ProjectDeadline(Action):
             return Err(f"Failed to parse date: {datetime.unwrap_err()}")
         self._memo["datetime"] = datetime.unwrap()
 
-        if self.project_id:
+        if self.project:
+            for project in ctx.user.projects:
+                if project.name == self.project:  # type: ignore
+                    self._memo["project"] = project
+                    return Ok(None)
+            return Err(f"Project {self.project} not found.")
+        
+        if ctx.user.default_project:
+            self._memo["project"] = ctx.user.default_project
             return Ok(None)
-
-        for project in ctx.user.projects:
-            if project == ctx.user.default_project:
-                self._memo["project"] = project
-                return Ok(None)
         return Err("No default project found.")
 
     def preflight_wrap(self, result: Result[None, str]) -> Result[None, str]:

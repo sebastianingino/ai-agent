@@ -17,6 +17,7 @@ from actions.project import (
     ProjectSetDefault,
 )
 
+from arguments.parser import ArgParser
 from commands.command import command, CommandContext
 from mistral import parsers
 from mistral.chat import Chat
@@ -32,14 +33,16 @@ LOGGER = logging.getLogger(__name__)
 @command("Project", "Manage your projects")
 async def project_entry(ctx: CommandContext, *args: str):
     if len(args) > 0:
-        return await ctx.reply("Usage: !project")
+        return await ctx.reply(
+            "Sorry, no command exists with that name. Use `!project help` to see a list of available commands."
+        )
     return await ctx.reply(await Chat.help(ctx.command_stack[-1].helptext() or ""))
 
 
 @command("New", "Create a new project", parent=project_entry)
 async def project_new(ctx: CommandContext, *args: str):
     if len(args) < 1:
-        return await ctx.reply("Usage: !project new [name]")
+        return await ctx.reply("Usage: `!project new [name]`")
     name = " ".join(args)
 
     action = ProjectNew(name=name)
@@ -76,7 +79,7 @@ async def project_new(ctx: CommandContext, *args: str):
 @command("List", "List your projects", parent=project_entry)
 async def project_list(ctx: CommandContext, *args: str):
     if len(args) > 0:
-        return await ctx.reply("Usage: !project list")
+        return await ctx.reply("Usage: `!project list`")
 
     return await ctx.reply(await preflight_execute(ProjectList(), ctx))
 
@@ -84,7 +87,7 @@ async def project_list(ctx: CommandContext, *args: str):
 @command("Info", "Get information about a project", parent=project_entry)
 async def project_info(ctx: CommandContext, *args: str):
     if len(args) < 1:
-        return await ctx.reply("Usage: !project info [name]")
+        return await ctx.reply("Usage: `!project info [name]`")
     name = " ".join(args)
 
     return await ctx.reply(await preflight_execute(ProjectInfo(name=name), ctx))
@@ -93,16 +96,21 @@ async def project_info(ctx: CommandContext, *args: str):
 @command("Deadline", "Set a deadline for a project", parent=project_entry)
 async def project_deadline(ctx: CommandContext, *args: str):
     if len(args) < 1:
-        return await ctx.reply("Usage: !project deadline [when] -n [name]")
-    when = " ".join(args)
+        return await ctx.reply("Usage: `!project deadline [when] -p [project]`")
 
-    return await ctx.reply(await preflight_execute(ProjectDeadline(when=when), ctx))
+    parser = ArgParser()
+    parser.add_argument("-p", "--project")
+
+    when = parser.parse(args)
+    return await ctx.reply(
+        await preflight_execute(ProjectDeadline(when=when, project=parser.project), ctx)
+    )
 
 
 @command("Delete", "Delete a project", parent=project_entry)
 async def project_delete(ctx: CommandContext, *args: str):
     if len(args) < 1:
-        return await ctx.reply("Usage: !project delete [name]")
+        return await ctx.reply("Usage: `!project delete [name]`")
     name = " ".join(args)
 
     action = ProjectDelete(name=name)
@@ -121,15 +129,15 @@ async def project_delete(ctx: CommandContext, *args: str):
 @command("Invite", "Invite users to a project", parent=project_entry)
 async def project_invite(ctx: CommandContext, *args: str):
     if len(args) < 1:
-        return await ctx.reply("Usage: !project invite [name] [users]")
+        return await ctx.reply("Usage: `!project invite [name] [users]`")
 
     name = " ".join(args for args in args if not args.startswith("<@"))
 
     if len(name.strip()) == 0:
-        return await ctx.reply("Usage: !project invite [name] [users]")
+        return await ctx.reply("Usage: `!project invite [name] [users]`")
 
     if len(ctx.message.mentions) < 1:
-        return await ctx.reply("Usage: !project invite [name] [users]")
+        return await ctx.reply("Usage: `!project invite [name] [users]`")
 
     users = [user.id for user in ctx.message.mentions]
 
@@ -141,14 +149,14 @@ async def project_invite(ctx: CommandContext, *args: str):
 @command("Kick", "Kick users from a project", parent=project_entry)
 async def project_kick(ctx: CommandContext, *args: str):
     if len(args) < 1:
-        return await ctx.reply("Usage: !project kick [name] [users]")
+        return await ctx.reply("Usage: `!project kick [name] [users]`")
 
     if len(ctx.message.mentions) < 1:
-        return await ctx.reply("Usage: !project kick [name] [users]")
+        return await ctx.reply("Usage: `!project kick [name] [users]`")
 
     name = " ".join(args for args in args if not args.startswith("<@"))
     if len(name.strip()) == 0:
-        return await ctx.reply("Usage: !project kick [name] [users]")
+        return await ctx.reply("Usage: `!project kick [name] [users]`")
 
     users = [user.id for user in ctx.message.mentions]
 
@@ -160,7 +168,7 @@ async def project_kick(ctx: CommandContext, *args: str):
 @command("Leave", "Leave a project", parent=project_entry)
 async def project_leave(ctx: CommandContext, *args: str):
     if len(args) < 1:
-        return await ctx.reply("Usage: !project leave [name]")
+        return await ctx.reply("Usage: `!project leave [name]`")
     name = " ".join(args)
 
     return await ctx.reply(await preflight_execute(ProjectLeave(name=name), ctx))
@@ -169,7 +177,7 @@ async def project_leave(ctx: CommandContext, *args: str):
 @command("Default", "Set a default project", parent=project_entry)
 async def project_default(ctx: CommandContext, *args: str):
     if len(args) < 1:
-        return await ctx.reply("Usage: !project default [name]")
+        return await ctx.reply("Usage: `!project default [name]`")
     name = " ".join(args)
 
     return await ctx.reply(await preflight_execute(ProjectSetDefault(name=name), ctx))
