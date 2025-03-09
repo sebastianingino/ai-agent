@@ -10,6 +10,10 @@ from actions.action import Action, Context
 
 
 class ProjectNew(Action):
+    """
+    Create a new project.
+    """
+
     name: str
     description: Optional[str] = None
     deadline: Optional[datetime] = None
@@ -60,6 +64,10 @@ class ProjectNew(Action):
 
 
 class ProjectList(Action):
+    """
+    List all projects.
+    """
+
     effective: ClassVar[bool] = False
     unsafe: ClassVar[bool] = False
 
@@ -90,6 +98,10 @@ class ProjectList(Action):
 
 
 class ProjectInfo(Action):
+    """
+    Get information about a project.
+    """
+
     name: str
 
     effective: ClassVar[bool] = False
@@ -138,6 +150,10 @@ class ProjectInfo(Action):
 
 
 class ProjectDeadline(Action):
+    """
+    Set the deadline for a project.
+    """
+
     project: Optional[str]
     when: str
 
@@ -156,7 +172,7 @@ class ProjectDeadline(Action):
                     self._memo["project"] = project
                     return Ok(None)
             return Err(f"Project {self.project} not found.")
-        
+
         if ctx.user.default_project:
             self._memo["project"] = ctx.user.default_project
             return Ok(None)
@@ -195,6 +211,10 @@ class ProjectDeadline(Action):
 
 
 class ProjectDelete(Action):
+    """
+    Delete a project.
+    """
+
     name: str
 
     effective: ClassVar[bool] = True
@@ -229,6 +249,10 @@ class ProjectDelete(Action):
 
 
 class ProjectInvite(Action):
+    """
+    Invite users to a project.
+    """
+
     name: str
     users: List[int]
 
@@ -280,6 +304,10 @@ class ProjectInvite(Action):
 
 
 class ProjectKick(Action):
+    """
+    Kick users from a project.
+    """
+
     name: str
     users: List[int]
 
@@ -331,6 +359,10 @@ class ProjectKick(Action):
 
 
 class ProjectLeave(Action):
+    """
+    Leave a project.
+    """
+
     name: str
 
     effective: ClassVar[bool] = True
@@ -372,6 +404,10 @@ class ProjectLeave(Action):
 
 
 class ProjectSetDefault(Action):
+    """
+    Set the default project.
+    """
+
     name: str
 
     effective: ClassVar[bool] = False

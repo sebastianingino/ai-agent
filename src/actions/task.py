@@ -9,6 +9,10 @@ from model.task import Task
 
 
 class TaskNew(Action):
+    """
+    Create a new task.
+    """
+
     name: str
     project: Optional[str] = None
 
@@ -70,6 +74,10 @@ class TaskNew(Action):
 
 
 class TaskMark(Action):
+    """
+    Mark a task as completed or incomplete.
+    """
+
     task: str
     status: bool
     project: Optional[str]
@@ -123,6 +131,10 @@ class TaskMark(Action):
 
 
 class TaskDelete(Action):
+    """
+    Delete a task.
+    """
+
     task: str
     project: Optional[str]
 
@@ -172,6 +184,10 @@ class TaskDelete(Action):
 
 
 class TaskList(Action):
+    """
+    List tasks for a project.
+    """
+
     project: Optional[str] = None
 
     effective: ClassVar[bool] = False
@@ -221,6 +237,10 @@ class TaskList(Action):
 
 
 class TaskDeadline(Action):
+    """
+    Set the deadline for a task.
+    """
+
     task: str
     when: str
     project: Optional[str] = None
@@ -292,6 +312,10 @@ class TaskDeadline(Action):
 
 
 class TaskListAll(Action):
+    """
+    List all tasks for the user.
+    """
+
     effective: ClassVar[bool] = False
     unsafe: ClassVar[bool] = False
 

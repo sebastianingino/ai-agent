@@ -2,7 +2,7 @@ from typing import List, Union
 import discord
 from mistralai import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
-CONTEXT_LIMIT = 20
+CONTEXT_LIMIT = 10
 RESET_POINT = "Bot state reset."
 
 Prompt = List[Union[SystemMessage, ToolMessage, UserMessage, AssistantMessage]]

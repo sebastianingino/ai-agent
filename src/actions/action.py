@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, ClassVar, Dict, Union
+from typing import Any, ClassVar, Dict, Optional, Union
 import discord.ext.commands
 from pydantic import BaseModel
 from result import Result
@@ -62,7 +62,30 @@ class Action(ABC, BaseModel):
     @abstractmethod
     def execute_wrap(self, result: Result[Any, Any]) -> Result[str, str]:
         pass
-    
+
     @abstractmethod
     def __str__(self) -> str:
         pass
+
+    @classmethod
+    def tool_schema(cls) -> Dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": cls.__name__,
+                "description": cls.__doc__.strip() if cls.__doc__ else "",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        k: v
+                        for k, v in cls.model_json_schema()["properties"].items()
+                        if k != "_memo"
+                    },
+                    "required": [
+                        k
+                        for k, v in cls.model_json_schema()["properties"].items()
+                        if k != "_memo" and v.get("type")
+                    ],
+                },
+            },
+        }

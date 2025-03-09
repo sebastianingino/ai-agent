@@ -12,7 +12,7 @@ from model.user import User
 from reactions import Reactions
 from dotenv import load_dotenv
 from mistral.agent import Agent
-import commands as bot_commands
+from commands.register import register
 from util import messages
 from discord.ext import tasks
 from datetime import datetime, time, timedelta
@@ -81,9 +81,6 @@ async def on_message(message: discord.Message):
     if message.content.startswith("."):
         return
     
-    if message.author.name != "sebastianingino":
-        return
-
     if not message.author.bot or message.content.startswith("!"):
         LOGGER.info(f"Processing message from {message.author}: {message.content}")
 
@@ -163,8 +160,8 @@ async def check_due_tasks():
         LOGGER.error(f"Error in check_due_tasks: {e}")
 
 
-# Commands
-bot_commands.register(bot)
+# Register commands
+register(bot)
 
 
 # Debugging command
