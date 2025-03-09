@@ -2,8 +2,10 @@ from discord.ext import commands
 from commands.project import project_entry as Project
 from commands.settings import settings_entry as Settings
 from commands.task import task_entry as Task
+from commands.ask import ask_entry as Ask
 
 command_map = {
+    "ask": Ask,
     "project": Project,
     "task": Task,
     "settings": Settings,
@@ -27,6 +29,10 @@ Use the `help` command to get help with a specific command (e.g. `!help project`
 
 def register(bot: commands.Bot):
     bot.help_command = Help()
+
+    @bot.command(name=Ask.name.lower(), help=Ask.help)
+    async def ask_entry(ctx: commands.Context, *args: str):
+        await Ask.entry(ctx, *args)
 
     @bot.command(name=Project.name.lower(), help=Project.help)
     async def project_entry(ctx: commands.Context, *args: str):
