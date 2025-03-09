@@ -7,11 +7,15 @@ import logging
 from discord.ext import commands
 from database.database import init_database
 from model import Models
+from model.task import Task
+from model.user import User
 from reactions import Reactions
 from dotenv import load_dotenv
 from mistral.agent import Agent
 import commands as bot_commands
 from util import messages
+from discord.ext import tasks
+from datetime import datetime, time, timedelta
 
 PREFIX = "!"
 
@@ -63,6 +67,7 @@ async def on_ready():
     https://discordpy.readthedocs.io/en/latest/api.html#discord.on_ready
     """
     LOGGER.info(f"{bot.user} has connected to Discord!")
+    check_due_tasks.start()
 
 
 @bot.event
@@ -120,6 +125,44 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     await Reactions.handle(reaction, message, user)
 
 
+
+@tasks.loop(time=time(minute=1))
+async def check_due_tasks():
+    # Get today's date
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    
+    try:
+        # Find all tasks due today
+        due_tasks = await Task.find({
+            "deadline": {"$gte": today, "$lt": tomorrow},
+            "completed": False
+        }).to_list()
+        
+        for task in due_tasks:
+            # Get the task owner
+            user = await User.get(task.owner)
+            if not user:
+                LOGGER.warning(f"User not found for task {task.id}")
+                continue
+                
+            # Get the Discord user
+            discord_user = bot.get_user(user.discord_id)
+            if not discord_user:
+                LOGGER.warning(f"Discord user not found for user ID {user.discord_id}")
+                continue
+                
+            # Send reminder as DM
+            try:
+                channel = await discord_user.create_dm()
+                await channel.send(f"⏰ Task due today: **{task.name}**\nDeadline: {task.deadline.strftime('%Y-%m-%d %H:%M')}")
+                LOGGER.info(f"Sent reminder for task {task.id} to user {discord_user.name}")
+            except Exception as e:
+                LOGGER.error(f"Failed to send reminder for task {task.id}: {e}")
+    except Exception as e:
+        LOGGER.error(f"Error in check_due_tasks: {e}")
+
+
 # Commands
 bot_commands.register(bot)
 
@@ -132,6 +175,39 @@ async def ping(ctx, *, arg=None):
     else:
         await ctx.reply(f"Pong! Your argument was {arg}")
 
+# User task commands
+@bot.command(name="duetoday", help="Shows tasks due today.")
+async def duetoday(ctx):
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow = today + timedelta(days=1)
+    
+    try:
+        # Find the user by their discord_id
+        user = await User.find_one({"discord_id": ctx.author.id})
+        if not user:
+            await ctx.reply("You need to be registered first.")
+            return
+            
+        # Find due tasks for this user
+        due_tasks = await Task.find({
+            "owner": user.id,
+            "deadline": {"$gte": today, "$lt": tomorrow},
+            "completed": False
+        }).to_list()
+        
+        if not due_tasks:
+            await ctx.reply("You have no tasks due today.")
+            return
+            
+        response = "Tasks due today:\n"
+        for task in due_tasks:
+            time_str = task.deadline.strftime("%H:%M")
+            response += f"• {task.name} - Due at {time_str}\n"
+        
+        await ctx.reply(response)
+    except Exception as e:
+        LOGGER.error(f"Error in duetoday command: {e}")
+        await ctx.reply("An error occurred while retrieving your tasks.")
 
 async def main():
     # Connect to MongoDB
