@@ -58,7 +58,7 @@ async def bot_included(context: List[discord.Message]) -> bool:
     return False
 
 
-async def is_bot_dm(message: discord.Message) -> bool:
+def is_bot_dm(message: discord.Message) -> bool:
     """
     Check if the message is a DM to the bot.
     """

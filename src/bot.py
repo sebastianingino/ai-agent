@@ -89,9 +89,7 @@ async def on_message(message: discord.Message):
     # Get the context of the message
     context = await messages.context(message)
     # Ignore threads/messages that haven't included the bot in the past 200 messages
-    if not await messages.bot_included(context) and not await messages.is_bot_dm(
-        message
-    ):
+    if not await messages.bot_included(context) and not messages.is_bot_dm(message):
         return
 
     async with message.channel.typing():
