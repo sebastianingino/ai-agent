@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, ClassVar, Dict, Optional, Union
+from typing import Any, ClassVar, Dict, List, Optional, Union
 import discord.ext.commands
 from pydantic import BaseModel
-from result import Result
+from result import Err, Ok, Result
 
 from commands.command import CommandContext
 from model.user import User
@@ -89,3 +89,24 @@ class Action(ABC, BaseModel):
                 },
             },
         }
+
+
+async def apply_multiple(
+    actions: List[Action], interaction: discord.Interaction
+) -> Result[None, str]:
+    user = await User.find_one(User.discord_id == interaction.user.id, fetch_links=True)
+    if user is None:
+        user = User(discord_id=interaction.user.id)
+        await user.insert()
+
+    context = ActionContext(user=user, bot=interaction.client)
+    for action in actions:
+        preflight = await action.preflight(context)
+        if preflight.is_err():
+            return Err(
+                f"Failed preflight on step {str(action)}: {preflight.unwrap_err()}"
+            )
+        result = await action.execute(context)
+        if result.is_err():
+            return Err(f"Failed execution on step {str(action)}: {result.unwrap_err()}")
+    return Ok(None)

@@ -10,6 +10,8 @@ async def ask_entry(ctx, *args: str):
     message = ctx.message
     async with message.channel.typing():
         response = await Agent.handle(message, [])
+        if not response:
+            return
 
         # Send the response back to the channel
         for chunk in messages.chunkify(response):

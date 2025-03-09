@@ -1,10 +1,13 @@
+import json
+import logging
 import os
+from re import S
 import discord
 from typing import List, Optional, Type
-from mistralai import Mistral, SystemMessage, UserMessage
+from mistralai import Mistral, SystemMessage, ToolMessage, UserMessage
 from datetime import datetime
 from pydantic import BaseModel
-from actions.action import Action
+from actions.action import Action, apply_multiple
 from actions.project import (
     ProjectDeadline,
     ProjectDelete,
@@ -14,6 +17,7 @@ from actions.project import (
 )
 from actions.task import TaskDeadline, TaskDelete, TaskMark, TaskNew
 from model.user import User
+from response.ButtonResponse import binary_response
 from util.messages import context_to_prompt
 
 MISTRAL_MODEL = "mistral-small-latest"
@@ -40,6 +44,9 @@ ACTIONS: List[Type[Action]] = [
 ]
 TOOLS = [action.tool_schema() for action in ACTIONS]
 TOOL_NAMES = {action.__name__: action for action in ACTIONS}
+
+LOGGER = logging.getLogger(__name__)
+
 
 class TaskObject(BaseModel):
     name: str
@@ -99,16 +106,16 @@ class AgentModel:
         return user_object.model_dump_json()
 
     async def handle(
-        self, messages: discord.Message, context: List[discord.Message]
-    ) -> str:
+        self, message: discord.Message, context: List[discord.Message]
+    ) -> Optional[str]:
         prompt = await context_to_prompt(context)
         prompt.append(SystemMessage(content=SYSTEM_PROMPT))
 
         user = await User.find_one(
-            User.discord_id == messages.author.id, fetch_links=True
+            User.discord_id == message.author.id, fetch_links=True
         )
         if not user:
-            user = User(discord_id=messages.author.id)
+            user = User(discord_id=message.author.id)
             await user.insert()
         prompt.append(
             SystemMessage(content=f"User status: \n{await self.get_user_status(user)}")
@@ -118,7 +125,7 @@ class AgentModel:
                 content=f"The current datetime is {datetime.now().isoformat()}"
             )
         )
-        prompt.append(UserMessage(content=messages.content))
+        prompt.append(UserMessage(content=message.content))
 
         response = await self.client.chat.complete_async(
             model=MISTRAL_MODEL,
@@ -129,21 +136,66 @@ class AgentModel:
 
         if not response.choices:
             return ERROR_RESPONSE
-        
 
-        unsafe = False
-        actions = []
         if response.choices[0].message.tool_calls:
+            unsafe = False
+            actions: List[Action] = []
+
+            async def callback(interaction: discord.Interaction):
+                result = await apply_multiple(actions, interaction)
+                if result.is_err():
+                    return await interaction.response.send_message(
+                        f"Error executing actions: {result.unwrap_err()}",
+                        ephemeral=True,
+                    )
+                prompt.append(SystemMessage(content="Actions executed successfully"))
+                response = await self.client.chat.complete_async(
+                    model=MISTRAL_MODEL,
+                    messages=prompt,
+                )
+                if not response.choices:
+                    return ERROR_RESPONSE
+                await interaction.response.send_message(
+                    response.choices[0].message.content
+                )
+
             for tool_call in response.choices[0].message.tool_calls:
                 action = TOOL_NAMES.get(tool_call.function.name)
                 if not action:
                     continue
                 try:
-                    actions.append(action.model_construct(values=tool_call.function.arguments))
-                except Exception:
+                    args = (
+                        json.loads(tool_call.function.arguments)
+                        if isinstance(tool_call.function.arguments, str)
+                        else tool_call.function.arguments
+                    )
+                    actions.append(action(**args))
+                    unsafe = unsafe or action.unsafe
+                except Exception as e:
+                    LOGGER.error(
+                        f"Error while parsing tool call {tool_call.function.name}: {e}"
+                    )
                     return ERROR_RESPONSE
-        print(actions)
 
+            if unsafe:
+                await message.reply(
+                    f"""
+Careful! This can't be undone. Are you sure you want to proceed?
+
+This will execute the following actions:
+{"\n".join([f"- {str(action)}" for action in actions])}
+                    """.strip(),
+                    view=binary_response(callback, user=message.author),
+                )
+                return None
+            await message.reply(
+                f"""
+This will execute the following actions:
+{"\n".join([f"- {str(action)}" for action in actions])}
+                """.strip(),
+                view=binary_response(callback, user=message.author),
+            )
+            return None
         return str(response.choices[0].message.content)
 
 

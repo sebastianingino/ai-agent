@@ -221,9 +221,12 @@ class ProjectDelete(Action):
     unsafe: ClassVar[bool] = True
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
-        project = await Project.find_one(
-            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id
-        )
+        projects = Project.find(Project.owner == ctx.user.id)
+        project = None
+        async for p in projects:
+            if p.name.lower() == self.name.lower():
+                project = p
+                break
         if not project:
             return Err(None)
         self._memo["project"] = project
@@ -370,7 +373,6 @@ class ProjectLeave(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, str]:
         for project in ctx.user.projects:
-            print(project)
             if project.name.lower() == self.name.lower():  # type: ignore
                 if project.owner == ctx.user.id:  # type: ignore
                     return Err(

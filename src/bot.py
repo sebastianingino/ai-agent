@@ -80,7 +80,7 @@ async def on_message(message: discord.Message):
     # Ignore messages to the Admin Bot
     if message.content.startswith("."):
         return
-    
+
     if not message.author.bot or message.content.startswith("!"):
         LOGGER.info(f"Processing message from {message.author}: {message.content}")
 
@@ -101,6 +101,8 @@ async def on_message(message: discord.Message):
         # Process the message with the agent you wrote
         # Open up the agent.py file to customize the agent
         response = await Agent.handle(message, context)
+        if not response:
+            return
 
         # Send the response back to the channel
         for chunk in messages.chunkify(response):
@@ -122,38 +124,40 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     await Reactions.handle(reaction, message, user)
 
 
-
 @tasks.loop(time=time(minute=1))
 async def check_due_tasks():
     # Get today's date
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
-    
+
     try:
         # Find all tasks due today
-        due_tasks = await Task.find({
-            "deadline": {"$gte": today, "$lt": tomorrow},
-            "completed": False
-        }).to_list()
-        
+        due_tasks = await Task.find(
+            {"deadline": {"$gte": today, "$lt": tomorrow}, "completed": False}
+        ).to_list()
+
         for task in due_tasks:
             # Get the task owner
             user = await User.get(task.owner)
             if not user:
                 LOGGER.warning(f"User not found for task {task.id}")
                 continue
-                
+
             # Get the Discord user
             discord_user = bot.get_user(user.discord_id)
             if not discord_user:
                 LOGGER.warning(f"Discord user not found for user ID {user.discord_id}")
                 continue
-                
+
             # Send reminder as DM
             try:
                 channel = await discord_user.create_dm()
-                await channel.send(f"⏰ Task due today: **{task.name}**\nDeadline: {task.deadline.strftime('%Y-%m-%d %H:%M')}")
-                LOGGER.info(f"Sent reminder for task {task.id} to user {discord_user.name}")
+                await channel.send(
+                    f"⏰ Task due today: **{task.name}**\nDeadline: {task.deadline.strftime('%Y-%m-%d %H:%M')}"
+                )
+                LOGGER.info(
+                    f"Sent reminder for task {task.id} to user {discord_user.name}"
+                )
             except Exception as e:
                 LOGGER.error(f"Failed to send reminder for task {task.id}: {e}")
     except Exception as e:
@@ -172,39 +176,43 @@ async def ping(ctx, *, arg=None):
     else:
         await ctx.reply(f"Pong! Your argument was {arg}")
 
+
 # User task commands
 @bot.command(name="duetoday", help="Shows tasks due today.")
 async def duetoday(ctx):
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
-    
+
     try:
         # Find the user by their discord_id
         user = await User.find_one({"discord_id": ctx.author.id})
         if not user:
             await ctx.reply("You need to be registered first.")
             return
-            
+
         # Find due tasks for this user
-        due_tasks = await Task.find({
-            "owner": user.id,
-            "deadline": {"$gte": today, "$lt": tomorrow},
-            "completed": False
-        }).to_list()
-        
+        due_tasks = await Task.find(
+            {
+                "owner": user.id,
+                "deadline": {"$gte": today, "$lt": tomorrow},
+                "completed": False,
+            }
+        ).to_list()
+
         if not due_tasks:
             await ctx.reply("You have no tasks due today.")
             return
-            
+
         response = "Tasks due today:\n"
         for task in due_tasks:
             time_str = task.deadline.strftime("%H:%M")
             response += f"• {task.name} - Due at {time_str}\n"
-        
+
         await ctx.reply(response)
     except Exception as e:
         LOGGER.error(f"Error in duetoday command: {e}")
         await ctx.reply("An error occurred while retrieving your tasks.")
+
 
 async def main():
     # Connect to MongoDB

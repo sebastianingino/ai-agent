@@ -4,7 +4,7 @@ from typing import List
 
 import discord
 
-from actions.action import Action, ActionContext
+from actions.action import Action, ActionContext, apply_multiple
 from actions.project import (
     ProjectDeadline,
     ProjectDelete,
@@ -238,25 +238,12 @@ async def delete_project(action: ProjectDelete, interaction: discord.Interaction
 
 
 async def apply_actions(actions: List[Action], interaction: discord.Interaction):
-    user = await UserModel.find_one(
-        UserModel.discord_id == interaction.user.id, fetch_links=True
-    )
-    if user is None:
-        user = UserModel(discord_id=interaction.user.id)
-        await user.insert()
-
-    context = ActionContext(user=user, bot=interaction.client)
-    for action in actions:
-        preflight = await action.preflight(context)
-        if preflight.is_err():
-            return await interaction.response.send_message(
-                f"Error importing project: failed preflight on step {str(action)}: {preflight.unwrap_err()}",
-            )
-        result = await action.execute(context)
-        if result.is_err():
-            return await interaction.response.send_message(
-                f"Error importing project: failed execution on step {str(action)}: {result.unwrap_err()}",
-            )
-    return await interaction.response.send_message(
-        "Project imported successfully.", ephemeral=True
-    )
+    result = await apply_multiple(actions, interaction)
+    if result.is_err():
+        return await interaction.response.send_message(
+            f"Error importing project: {result.unwrap_err()}", ephemeral=True
+        )
+    if result.is_ok():
+        return await interaction.response.send_message(
+            "Project imported successfully.", ephemeral=True
+        )
