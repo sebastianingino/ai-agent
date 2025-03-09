@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from result import as_result
 from mistral.chat import Chat
 
+MISTRAL_MODEL = "mistral-small-latest"
 
 @as_result(Exception)
 def when_to_datetime(when: str) -> datetime:
@@ -13,7 +14,7 @@ def when_to_datetime(when: str) -> datetime:
 
     client = Chat.client
     response = client.chat.parse(
-        model="mistral-small-latest",
+        model=MISTRAL_MODEL,
         messages=[
             {
                 "role": "system",
@@ -43,7 +44,7 @@ def datetime_to_when(dt: datetime) -> str:
 
     client = Chat.client
     response = client.chat.parse(
-        model="mistral-small-latest",
+        model=MISTRAL_MODEL,
         messages=[
             {
                 "role": "system",
