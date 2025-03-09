@@ -50,7 +50,7 @@ class ArgParser:
         for arg in self.args.values():
             arg.reset()
 
-        result = []
+        result: List[str] = []
         cur_arg = None
         if isinstance(input, str):
             input = input.split()
@@ -60,10 +60,5 @@ class ArgParser:
             elif val.startswith("-"):
                 cur_arg = self.short_args.get(val[1:])
             else:
-                if cur_arg:
-                    cur_arg.append(val)
-                else:
-                    result.append(val)
-                cur_arg = None
-
+                (cur_arg or result).append(val)
         return " ".join(result)
