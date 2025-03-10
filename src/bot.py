@@ -124,7 +124,8 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     await Reactions.handle(reaction, message, user)
 
 
-@tasks.loop(time=time(minute=1))
+
+@tasks.loop(time=time(hour=8))
 async def check_due_tasks():
     # Get today's date
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
