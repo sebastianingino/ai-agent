@@ -1,4 +1,5 @@
 import asyncio
+from collections import defaultdict
 import os
 import coloredlogs
 import discord
@@ -68,6 +69,7 @@ async def on_ready():
     """
     LOGGER.info(f"{bot.user} has connected to Discord!")
     check_due_tasks.start()
+    daily_task_report.start()
 
 
 @bot.event
@@ -164,6 +166,43 @@ async def check_due_tasks():
     except Exception as e:
         LOGGER.error(f"Error in check_due_tasks: {e}")
 
+
+@tasks.loop(time=time(5, 0))
+async def daily_task_report():
+    channel = bot.get_channel(1337208671339282433)
+
+    task_counts = defaultdict(int)
+    all_tasks = await Task.find({"completed": True}).to_list()
+    LOGGER.info(
+        all_tasks
+    )
+    now = datetime.now()
+
+    for task in all_tasks:
+        if task.completed_date and task.completed_date.date() == now.date():
+            task_counts[task.owner] += 1
+
+    if not task_counts:
+        await channel.send("No tasks completed today. We'll get 'em tomorrow!")
+        return
+
+    max_completed = max(task_counts.values())
+    top_users = [user for user, count in task_counts.items() if count == max_completed]
+
+    top_usernames = []
+    for person in top_users:
+        user = await User.find_one({"_id": person})
+        if not user:
+            LOGGER.error(f"No user found with this ID.")
+        name = await bot.fetch_user(user.discord_id)
+        top_usernames.append(name.name)
+
+    if len(top_users) == 1:
+        winner = top_usernames[0]
+        await channel.send(f"Congrats {winner}! You completed the most tasks today with {max_completed} tasks. Thanks for your hard work! 🎉")
+    else:
+        user_list = ", ".join(top_usernames)
+        await channel.send(f"Productive day! {user_list} all completed {max_completed} tasks each! Keep it up! 💪")
 
 # Register commands
 register(bot)

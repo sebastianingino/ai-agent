@@ -18,6 +18,7 @@ class TaskNew(Action):
 
     description: Optional[str] = None
     deadline: Optional[datetime] = None
+    completed_date: Optional[datetime] = None
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = False
@@ -113,6 +114,10 @@ class TaskMark(Action):
     async def execute(self, ctx: Context) -> Result[Task, Exception]:
         task = self._memo["task"]
         task.completed = self.status
+        if self.status:
+            task.completed_date = datetime.now().date()
+        else:
+            task.completed_date = None
         try:
             await task.save()
             return Ok(task)

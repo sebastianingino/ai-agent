@@ -13,5 +13,7 @@ class Task(Document):
     deadline: Optional[datetime]
     completed: bool = False
 
+    completed_date: Optional[datetime] = None
+
     class Meta:
         collection = "tasks"
