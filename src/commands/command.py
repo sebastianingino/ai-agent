@@ -64,7 +64,7 @@ class Command:
         if action is None:
             if return_action:
                 return self if len(args) == 0 else None
-            await self.callback(ctx, *args, return_action=return_action)
+            await self.callback(ctx, *args)
             return None
         return await action.entry(ctx, *args[1:], return_action=return_action)
 
