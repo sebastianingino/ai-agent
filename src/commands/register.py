@@ -24,8 +24,19 @@ Use the `help` command to get help with a specific command (e.g. `!help project`
             """.strip()
         )
 
-    async def send_command_help(self, command):
+    async def send_command_help(self, command: commands.Command):
         await self.context.reply(command_map[command.name.lower()].helptext())
+
+    async def subcommand_not_found(self, command: commands.Command, string: str) -> str:  # type: ignore
+        if command is None or command.name.lower() not in command_map:
+            return f"Unknown command `{string}`."
+        command_type = command_map[command.name.lower()]
+        action = await command_type.entry(
+            self.context, *f"{string} help".split(), return_action=True
+        )
+        if action is None:
+            return f"Unknown subcommand `{string}` in `{command.name}`."
+        return action.helptext()
 
 
 def register(bot: commands.Bot):

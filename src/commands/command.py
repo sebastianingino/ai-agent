@@ -51,7 +51,9 @@ class Command:
         self.subcommands = subcommands or []
         self.names = set(subcommand.name for subcommand in self.subcommands)
 
-    async def entry(self, ctx: commands.Context, *args: str):
+    async def entry(
+        self, ctx: commands.Context, *args: str, return_action: bool = False
+    ) -> Optional["Command"]:
         action = self.parse(args)
         if "command_stack" not in ctx.__dict__:
             ctx.command_stack = []  # type: ignore
@@ -62,7 +64,10 @@ class Command:
                 await ctx.user.insert()  # type: ignore
         ctx.command_stack.append(self)  # type: ignore
         if action is None:
-            return await self.callback(ctx, *args)
+            if return_action:
+                return self
+            await self.callback(ctx, *args)
+            return None
         return await action.entry(ctx, *args[1:])
 
     def parse(self, args: Tuple[str, ...]) -> Optional["Command"]:
