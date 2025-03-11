@@ -27,6 +27,7 @@ sentry_sdk.init(
     dsn="https://eb37c6a6f385fc23e9b3f55308e4af7e@o4507331026747392.ingest.us.sentry.io/4508957002956800",
     send_default_pii=True,
     integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)],
+    environment=os.getenv("ENVIRONMENT") or "LOCAL",
 )
 
 PREFIX = "!"
