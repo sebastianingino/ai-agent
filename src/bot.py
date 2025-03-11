@@ -30,6 +30,13 @@ sentry_sdk.init(
     environment=os.getenv("ENV") or "local",
 )
 
+# Google Cloud Logging
+if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+    import google.cloud.logging as cloud_logging
+
+    client = cloud_logging.Client()
+    client.setup_logging()
+
 PREFIX = "!"
 
 # Setup logging
