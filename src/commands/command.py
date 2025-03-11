@@ -1,8 +1,6 @@
 import logging
 from typing import Any, List, Optional, Set, Tuple
-
 from discord.ext import commands
-
 from model.user import User as UserModel
 
 LOGGER = logging.getLogger(__name__)
@@ -65,10 +63,10 @@ class Command:
         ctx.command_stack.append(self)  # type: ignore
         if action is None:
             if return_action:
-                return self
-            await self.callback(ctx, *args)
+                return self if len(args) == 0 else None
+            await self.callback(ctx, *args, return_action=return_action)
             return None
-        return await action.entry(ctx, *args[1:])
+        return await action.entry(ctx, *args[1:], return_action=return_action)
 
     def parse(self, args: Tuple[str, ...]) -> Optional["Command"]:
         if len(args) == 0:

@@ -32,7 +32,7 @@ Use the `help` command to get help with a specific command (e.g. `!help project`
             return f"Unknown command `{string}`."
         command_type = command_map[command.name.lower()]
         action = await command_type.entry(
-            self.context, *f"{string} help".split(), return_action=True
+            self.context, *string.split(), return_action=True
         )
         if action is None:
             return f"Unknown subcommand `{string}` in `{command.name}`."
