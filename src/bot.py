@@ -47,6 +47,7 @@ coloredlogs.install(level="DEBUG", fmt="%(asctime)s %(name)s %(levelname)s %(mes
 logging.getLogger("asyncio").setLevel(logging.INFO)
 logging.getLogger("discord").setLevel(logging.INFO)
 logging.getLogger("httpcore").setLevel(logging.INFO)
+LOGGER.info("Environment: %s", environment)
 
 # Load the environment variables
 load_dotenv()
