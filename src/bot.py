@@ -31,7 +31,7 @@ sentry_sdk.init(
 )
 
 # Google Cloud Logging
-if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+if os.getenv("ENV") == "production":
     import google.cloud.logging as cloud_logging
 
     client = cloud_logging.Client()
@@ -69,8 +69,8 @@ class Bot(commands.Bot):
 
 
 bot: Bot
-environment = os.getenv("ENVIRONMENT")
-if environment == "DEV":
+environment = os.getenv("ENV")
+if environment == "development":
     from test.mockbot import MockBot
 
     bot = MockBot(command_prefix=PREFIX, intents=intents)  # type: ignore
