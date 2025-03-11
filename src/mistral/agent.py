@@ -1,12 +1,14 @@
 import json
 import logging
 import os
+from beanie import PydanticObjectId
 import discord
 from typing import List, Optional, Type
 from mistralai import Mistral, SystemMessage, UserMessage
 from datetime import datetime
 from pydantic import BaseModel
 from actions.action import Action, apply_multiple
+from actions.document import DocumentAdd, DocumentRemove, DocumentSearch
 from actions.project import (
     ProjectDeadline,
     ProjectDelete,
@@ -20,15 +22,15 @@ from response.ButtonResponse import binary_response
 from util.messages import context_to_prompt
 
 MISTRAL_MODEL = "mistral-small-latest"
-SYSTEM_PROMPT = """You are a helpful and friendly project manager assistant. You help users manage their projects and tasks. 
+SYSTEM_PROMPT = """You are a helpful and friendly project manager assistant named Discoin. You help users manage their projects and tasks. 
 You have access to all the information about the user and their projects. You can also perform actions on the user's behalf.
 You can create, update, and delete tasks and projects. You can also mark tasks as completed or not completed. You can also leave a shared project and set a project as default.
 You can also set deadlines for tasks and projects. You can't invite or kick people from projects, but you can tell them to do so if needed using the `!project invite` and `!project kick` commands.
-Please keep responses relevant to the user's projects and tasks, and avoid discussing unrelated topics. Keep responses polite, short, and concise.
-If you don't know the answer, say "I don't know" or "I can't help with that".
+Please keep responses relevant to the user's projects and tasks, and avoid discussing unrelated topics. Keep responses polite, short, and concise. You should still be friendly and helpful.
+If you don't know the answer, say "I don't know" or "I can't help with that". If no answer exists when looking up documents, tell the user that you couldn't find any relevant information.
 You can also ask the user for more information if needed.
 Please use relative dates when possible, e.g. "tomorrow", "this Thursday", "next week", etc. If something is further away, use absolute dates and times. You may omit the time if it's not relevant.
-You are provided the context of the conversation, including the user's messages and the bot's responses. Each message is timestamped in ISO format. 
+You are provided the context of the conversation, including the user's messages and the bot's responses. Each message contains the timestamp in ISO format at the beginning. Do not include a timestamp at the beginning of your response.
 """
 OTHER_USERS_MESSAGE = "Some of the messages in the context are from other users and are marked as such. Please note that the current user may or may not be able to see the projects and tasks of other users."
 ERROR_RESPONSE = "Looks like something went wrong. Please try again later."
@@ -42,6 +44,9 @@ ACTIONS: List[Type[Action]] = [
     TaskDeadline,
     TaskDelete,
     TaskMark,
+    DocumentAdd,
+    DocumentRemove,
+    DocumentSearch,
 ]
 TOOLS = [action.tool_schema() for action in ACTIONS]
 TOOL_NAMES = {action.__name__: action for action in ACTIONS}
@@ -50,6 +55,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 class TaskObject(BaseModel):
+    _id: PydanticObjectId
     name: str
     completed: bool
     description: Optional[str] = None
@@ -58,6 +64,7 @@ class TaskObject(BaseModel):
 
 
 class ProjectObject(BaseModel):
+    _id: PydanticObjectId
     name: str
     is_owner: bool
     description: Optional[str] = None
@@ -65,6 +72,7 @@ class ProjectObject(BaseModel):
     deadline: Optional[datetime] = None
 
     tasks: List[TaskObject] = []
+    documents: List[str] = []
 
 
 class UserObject(BaseModel):
@@ -86,15 +94,18 @@ class AgentModel:
 
         for project in user.projects:
             project_object = ProjectObject(
+                _id=project.id,  # type: ignore
                 name=project.name,  # type: ignore
                 description=project.description,  # type: ignore
                 is_owner=project.owner == user.id,  # type: ignore
                 deadline=project.deadline,  # type: ignore
+                documents=[],
                 tasks=[],
             )
 
             for task in project.tasks:  # type: ignore
                 task_object = TaskObject(
+                    _id=task.id,
                     name=task.name,
                     description=task.description,
                     completed=task.completed,
@@ -102,12 +113,18 @@ class AgentModel:
                 )
                 project_object.tasks.append(task_object)
 
+            for document in project.documents:  # type: ignore
+                project_object.documents.append(document.title)
+
             user_object.projects.append(project_object)
 
         return user_object.model_dump_json()
 
     async def handle(
-        self, message: discord.Message, context: List[discord.Message]
+        self,
+        message: discord.Message,
+        context: List[discord.Message],
+        bot: discord.Client,
     ) -> Optional[str]:
         prompt, other_users = context_to_prompt(context, message.author)
         prompt.append(SystemMessage(content=SYSTEM_PROMPT))
@@ -128,7 +145,11 @@ class AgentModel:
                 content=f"The current datetime is {datetime.now().isoformat()}"
             )
         )
-        prompt.append(UserMessage(content=message.content))
+
+        user_message = f"({message.created_at.isoformat()}) {message.content}"
+        if len(message.attachments) > 0:
+            user_message += f"\nAttached URLs: {' '.join(attachment.url for attachment in message.attachments)}"
+        prompt.append(UserMessage(content=user_message))
 
         response = await self.client.chat.complete_async(
             model=MISTRAL_MODEL,
@@ -141,26 +162,29 @@ class AgentModel:
             return ERROR_RESPONSE
 
         if response.choices[0].message.tool_calls:
-            unsafe = False
+            unsafe, effective = False, False
             actions: List[Action] = []
 
             async def callback(interaction: discord.Interaction):
-                result = await apply_multiple(actions, interaction)
-                if result.is_err():
-                    return await interaction.response.send_message(
-                        f"Error executing actions: {result.unwrap_err()}",
-                        ephemeral=True,
+                async with message.channel.typing():
+                    result = await apply_multiple(
+                        actions, interaction.user, interaction.client
                     )
-                prompt.append(SystemMessage(content="Actions executed successfully"))
-                response = await self.client.chat.complete_async(
-                    model=MISTRAL_MODEL,
-                    messages=prompt,
-                )
-                if not response.choices:
-                    return ERROR_RESPONSE
-                await interaction.response.send_message(
-                    response.choices[0].message.content
-                )
+                    if result.is_err():
+                        return await interaction.response.send_message(
+                            f"Error executing actions: {result.unwrap_err()}",
+                            ephemeral=True,
+                        )
+                    prompt.append(
+                        SystemMessage(content="Actions executed successfully")
+                    )
+                    response = await self.client.chat.complete_async(
+                        model=MISTRAL_MODEL,
+                        messages=prompt,
+                    )
+                    if not response.choices:
+                        return ERROR_RESPONSE
+                    await message.reply(str(response.choices[0].message.content))
 
             for tool_call in response.choices[0].message.tool_calls:
                 action = TOOL_NAMES.get(tool_call.function.name)
@@ -174,6 +198,7 @@ class AgentModel:
                     )
                     actions.append(action(**args))
                     unsafe = unsafe or action.unsafe
+                    effective = effective or action.effective
                 except Exception as e:
                     LOGGER.error(
                         f"Error while parsing tool call {tool_call.function.name}: {e}"
@@ -191,14 +216,32 @@ This will execute the following actions:
                     view=binary_response(callback, user=message.author),
                 )
                 return None
-            await message.reply(
-                f"""
-This will execute the following actions:
-{"\n".join([f"- {str(action)}" for action in actions])}
-                """.strip(),
-                view=binary_response(callback, user=message.author),
+            if effective:
+                await message.reply(
+                    f"""
+    This will execute the following actions:
+    {"\n".join([f"- {str(action)}" for action in actions])}
+                    """.strip(),
+                    view=binary_response(callback, user=message.author),
+                )
+                return None
+
+            result = await apply_multiple(
+                actions,
+                message.author,
+                bot,
             )
-            return None
+            if result.is_err():
+                return f"Error executing actions: {result.unwrap_err()}"
+            prompt.append(SystemMessage(content="Actions executed successfully"))
+            response = await self.client.chat.complete_async(
+                model=MISTRAL_MODEL,
+                messages=prompt,
+            )
+            if not response.choices:
+                return ERROR_RESPONSE
+            return str(response.choices[0].message.content)
+
         return str(response.choices[0].message.content)
 
 

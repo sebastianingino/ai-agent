@@ -17,6 +17,7 @@ class Button(DiscordButton):
         super().__init__(label=label, style=style)
         self._callback = callback
         self.user = user
+        self.called = False
 
     @override
     async def interaction_check(self, interaction: Interaction) -> bool:
@@ -26,12 +27,13 @@ class Button(DiscordButton):
 
     @override
     async def callback(self, interaction: Interaction):
-        if self._callback is not None:
-            await self._callback(interaction)
         if self.view is not None:
             self.view.stop()
         if interaction.message is not None:
             await interaction.message.edit(view=None)
+        if self._callback is not None and not self.called:
+            self.called = True
+            await self._callback(interaction)
 
 
 async def default_neg(interaction: Interaction):

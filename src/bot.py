@@ -114,7 +114,7 @@ async def on_message(message: discord.Message):
     async with message.channel.typing():
         # Process the message with the agent you wrote
         # Open up the agent.py file to customize the agent
-        response = await Agent.handle(message, context)
+        response = await Agent.handle(message, context, bot)
         if not response:
             return
 

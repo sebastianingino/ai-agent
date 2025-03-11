@@ -92,21 +92,23 @@ class Action(ABC, BaseModel):
 
 
 async def apply_multiple(
-    actions: List[Action], interaction: discord.Interaction
+    actions: List[Action],
+    user: Union[discord.User, discord.Member],
+    client: discord.Client,
 ) -> Result[None, str]:
-    user = await User.find_one(User.discord_id == interaction.user.id, fetch_links=True)
-    if user is None:
-        user = User(discord_id=interaction.user.id)
-        await user.insert()
+    user_model = await User.find_one(User.discord_id == user.id, fetch_links=True)
+    if user_model is None:
+        user_model = User(discord_id=user.id)
+        await user_model.insert()
 
-    context = ActionContext(user=user, bot=interaction.client)
+    context = ActionContext(user=user_model, bot=client)
     for action in actions:
         preflight = await action.preflight(context)
         if preflight.is_err():
             return Err(
-                f"Failed preflight on step {str(action)}: {preflight.unwrap_err()}"
+                f"Failed preflight on step {str(action)}: {action.preflight_wrap(preflight).unwrap_err()}"
             )
         result = await action.execute(context)
         if result.is_err():
-            return Err(f"Failed execution on step {str(action)}: {result.unwrap_err()}")
+            return Err(f"Failed execution on step {str(action)}: {action.execute_wrap(result).unwrap_err()}")
     return Ok(None)

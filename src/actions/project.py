@@ -3,7 +3,7 @@ from typing import ClassVar, List, Optional
 import discord
 from result import Err, Ok, Result
 
-from mistral import functions
+from mistral import functions, rag
 from model.project import Project
 from model.user import User
 from actions.action import Action, Context
@@ -11,7 +11,7 @@ from actions.action import Action, Context
 
 class ProjectNew(Action):
     """
-    Create a new project.
+    Create a new project. The project name must be unique.
     """
 
     name: str
@@ -154,8 +154,8 @@ class ProjectDeadline(Action):
     Set the deadline for a project.
     """
 
-    project: Optional[str]
     when: str
+    project: Optional[str] = None
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = False
@@ -239,6 +239,15 @@ class ProjectDelete(Action):
 
     async def execute(self, ctx: Context) -> Result[None, None]:
         project = self._memo["project"]
+        for task in project.tasks:
+            await task.delete()
+        for document in project.documents:
+            await rag.delete_documents(document.document_ids)
+            await document.delete()
+        if ctx.user.default_project == project:
+            ctx.user.default_project = None
+        ctx.user.projects.remove(project)
+        await ctx.user.save()
         await project.delete()
         return Ok(None)
 

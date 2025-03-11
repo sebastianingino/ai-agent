@@ -31,7 +31,7 @@ class QueriedDocument(BaseModel):
     project: PydanticObjectId
 
     def rag_string(self) -> str:
-        return f"### {self.title}\n{self.text}"
+        return f"### {self.title} \n{self.text}"
 
 
 def rag_chunk(text: str) -> List[str]:
@@ -101,6 +101,44 @@ async def query_documents(
                 "exact": True,
                 "limit": limit or DEFAULT_LIMIT,
                 "filter": {"project": project_id},
+            }
+        },
+        {
+            "$project": {
+                "_id": 0,
+                "title": 1,
+                "text": 1,
+                "project": 1,
+            }
+        },
+    ]
+
+    try:
+        results = await database.rag_collection.aggregate(pipeline).to_list(5)
+        return Ok([QueriedDocument(**result) for result in results])
+    except Exception as e:
+        return Err(e)
+
+
+async def query_all_documents(
+    query: str, projects: List[PydanticObjectId], limit: Optional[int]
+) -> Result[List[QueriedDocument], Exception]:
+    if database.rag_collection is None:
+        raise ValueError("MongoDB collection not found")
+
+    embedded_query = await generate_embedding(query)
+    if embedded_query.is_err():
+        return Err(embedded_query.unwrap_err())
+
+    pipeline: Sequence[Mapping[str, Any]] = [
+        {
+            "$vectorSearch": {
+                "index": "vector_index",
+                "queryVector": embedded_query.unwrap(),
+                "path": "embedding",
+                "exact": True,
+                "limit": limit or DEFAULT_LIMIT,
+                "filter": {"project": {"$in": projects}},
             }
         },
         {

@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import ClassVar, List, Optional
 from result import Err, Ok, Result
 import validators
@@ -10,6 +11,7 @@ from model.project import Project
 from parsers.url import url_retrieve
 from pydantic.json import pydantic_encoder
 
+LOGGER = logging.getLogger(__name__)
 
 class DocumentAdd(Action):
     """
@@ -17,7 +19,7 @@ class DocumentAdd(Action):
     """
 
     urls: List[str]
-    project: Optional[str]
+    project: Optional[str] = None
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = False
@@ -25,6 +27,7 @@ class DocumentAdd(Action):
     async def preflight(self, ctx: Context) -> Result[None, str]:
         for url in self.urls:
             if not validators.url(url):
+                LOGGER.warning(f"Invalid URL: {url}")
                 return Err(f"Invalid URL: {url}")
         if self.project:
             for project in ctx.user.projects:
@@ -76,7 +79,7 @@ class DocumentRemove(Action):
     """
 
     name: str
-    project: Optional[str]
+    project: Optional[str] = None
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = True
@@ -128,7 +131,7 @@ class DocumentList(Action):
     List documents in the project.
     """
 
-    project: Optional[str]
+    project: Optional[str] = None
 
     effective: ClassVar[bool] = False
     unsafe: ClassVar[bool] = False
@@ -169,12 +172,14 @@ class DocumentList(Action):
 
 class DocumentSearch(Action):
     """
-    Search for documents in the project.
+    Get the contents of documents matching a query based on their embeddings.
+    This should be used to access the contents of documents that are not directly accessible.
+    Note that the project, if not specified, will default to the user's default project.
     """
 
     query: str
-    project: Optional[str]
-    limit: Optional[int]
+    project: Optional[str] = None
+    limit: Optional[int] = None
 
     effective: ClassVar[bool] = False
     unsafe: ClassVar[bool] = False
@@ -208,3 +213,39 @@ class DocumentSearch(Action):
 
     def __str__(self) -> str:
         return f"Search for documents in {self.project}"
+
+
+class DocumentSearchAll(Action):
+    """
+    Get the contents of documents matching a query based on their embeddings.
+    This should be used to access the contents of documents that are not directly accessible.
+    This searches all projects.
+    """
+
+    query: str
+    limit: Optional[int] = None
+
+    effective: ClassVar[bool] = False
+    unsafe: ClassVar[bool] = False
+
+    async def preflight(self, ctx: Context) -> Result[None, str]:
+        return Ok(None)
+
+    def preflight_wrap(self, result: Result[None, str]) -> Result[None, str]:
+        return result
+
+    async def execute(
+        self, ctx: Context
+    ) -> Result[List[rag.QueriedDocument], Exception]:
+        projects = [project.id for project in ctx.user.projects]  # type: ignore
+        return await rag.query_all_documents(self.query, projects, self.limit)
+
+    def execute_wrap(
+        self, result: Result[List[rag.QueriedDocument], Exception]
+    ) -> Result[str, str]:
+        if result.is_err():
+            return Err(f"Error searching documents: {result.unwrap_err()}")
+        return Ok(json.dumps(result.unwrap(), default=pydantic_encoder))
+
+    def __str__(self) -> str:
+        return "Search for documents in all projects"

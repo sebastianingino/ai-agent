@@ -328,7 +328,7 @@ async def delete_project(action: ProjectDelete, interaction: discord.Interaction
 
 
 async def apply_actions(actions: List[Action], interaction: discord.Interaction):
-    result = await apply_multiple(actions, interaction)
+    result = await apply_multiple(actions, interaction.user, interaction.client)
     if result.is_err():
         return await interaction.response.send_message(
             f"Error importing project: {result.unwrap_err()}", ephemeral=True

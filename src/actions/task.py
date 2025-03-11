@@ -81,7 +81,7 @@ class TaskMark(Action):
 
     task: str
     status: bool
-    project: Optional[str]
+    project: Optional[str] = None
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = False
@@ -94,11 +94,11 @@ class TaskMark(Action):
             project = ctx.user.default_project
         else:
             for p in ctx.user.projects:
-                if p.name == self.project:  # type: ignore
-                    project = project
+                if p.name.lower() == self.project.lower():  # type: ignore
+                    project = p
 
         if not project:
-            return Err("Project not found.")
+            return Err(f"Project {self.project} not found.")
 
         for task in project.tasks:  # type: ignore
             if task.name.lower() == self.task.lower():
@@ -141,7 +141,7 @@ class TaskDelete(Action):
     """
 
     task: str
-    project: Optional[str]
+    project: Optional[str] = None
 
     effective: ClassVar[bool] = True
     unsafe: ClassVar[bool] = True
