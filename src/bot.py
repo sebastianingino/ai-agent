@@ -80,8 +80,10 @@ async def on_ready():
     https://discordpy.readthedocs.io/en/latest/api.html#discord.on_ready
     """
     LOGGER.info(f"{bot.user} has connected to Discord!")
-    check_due_tasks.start()
-    daily_task_report.start()
+    if not check_due_tasks.is_running():
+        check_due_tasks.start()
+    if not daily_task_report.is_running():
+        daily_task_report.start()
 
 
 @bot.event

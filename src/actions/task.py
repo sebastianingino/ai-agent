@@ -155,7 +155,7 @@ class TaskDelete(Action):
         else:
             for p in ctx.user.projects:
                 if p.name == self.project:  # type: ignore
-                    project = project
+                    project = p
 
         if not project:
             return Err("Project not found.")
@@ -185,7 +185,10 @@ class TaskDelete(Action):
         return Ok(f"Task {result.unwrap().name} deleted.")
 
     def __str__(self) -> str:
-        return "**Delete task**"
+        result = f"**Delete task**: {self.task}" 
+        if self.project:
+            result += f" in {self.project}"
+        return result
 
 
 class TaskList(Action):
@@ -267,7 +270,7 @@ class TaskDeadline(Action):
         else:
             for p in ctx.user.projects:
                 if p.name == self.project:  # type: ignore
-                    project = project
+                    project = p
 
         if not project:
             return Err("Project not found.")

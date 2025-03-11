@@ -30,7 +30,7 @@ Please keep responses relevant to the user's projects and tasks, and avoid discu
 If you don't know the answer, say "I don't know" or "I can't help with that". If no answer exists when looking up documents, tell the user that you couldn't find any relevant information.
 You can also ask the user for more information if needed.
 Please use relative dates when possible, e.g. "tomorrow", "this Thursday", "next week", etc. If something is further away, use absolute dates and times. You may omit the time if it's not relevant.
-You are provided the context of the conversation, including the user's messages and the bot's responses. Each message contains the timestamp in ISO format at the beginning. Do not include a timestamp at the beginning of your response.
+You are provided the context of the conversation, including the user's messages and the bot's responses. Each message contains the timestamp in ISO format at the beginning. You should not include a message timestamp in your response.
 """
 OTHER_USERS_MESSAGE = "Some of the messages in the context are from other users and are marked as such. Please note that the current user may or may not be able to see the projects and tasks of other users."
 ERROR_RESPONSE = "Looks like something went wrong. Please try again later."
@@ -171,9 +171,8 @@ class AgentModel:
                         actions, interaction.user, interaction.client
                     )
                     if result.is_err():
-                        return await interaction.response.send_message(
-                            f"Error executing actions: {result.unwrap_err()}",
-                            ephemeral=True,
+                        return await message.reply(
+                            f"Error executing actions: {result.unwrap_err()}"
                         )
                     prompt.append(
                         SystemMessage(content="Actions executed successfully")
@@ -213,16 +212,7 @@ Careful! This can't be undone. Are you sure you want to proceed?
 This will execute the following actions:
 {"\n".join([f"- {str(action)}" for action in actions])}
                     """.strip(),
-                    view=binary_response(callback, user=message.author),
-                )
-                return None
-            if effective:
-                await message.reply(
-                    f"""
-    This will execute the following actions:
-    {"\n".join([f"- {str(action)}" for action in actions])}
-                    """.strip(),
-                    view=binary_response(callback, user=message.author),
+                    view=binary_response(callback, user=message.author, reverse=True),
                 )
                 return None
 
