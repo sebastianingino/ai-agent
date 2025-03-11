@@ -1,4 +1,3 @@
-import base64
 from datetime import datetime
 from pydantic import BaseModel
 from result import as_result

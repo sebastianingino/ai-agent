@@ -77,7 +77,7 @@ class MockBotUI(App):
         chat = self.query_one("#chat_scroll", VerticalScroll)
         if len(self.messages) > 0:
             chat.mount(self.messages[-1])
-        await self.handler(self.OnReady())
+        await self.handler(self.OnReady()) # type: ignore
         self.query_one(Input).focus()
 
     class OnReady:
