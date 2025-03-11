@@ -53,10 +53,6 @@ class Command:
 
     async def entry(self, ctx: commands.Context, *args: str):
         action = self.parse(args)
-        if action:
-            LOGGER.debug(f"Command {self.name} entry {args} -> {action.name}")
-        else:
-            LOGGER.debug(f"Command {self.name} entry {args}")
         if "command_stack" not in ctx.__dict__:
             ctx.command_stack = []  # type: ignore
         if "user" not in ctx.__dict__:
@@ -70,7 +66,6 @@ class Command:
         return await action.entry(ctx, *args[1:])
 
     def parse(self, args: Tuple[str, ...]) -> Optional["Command"]:
-        LOGGER.debug(f"Command {self.name} parsing {args}")
         if len(args) == 0:
             return None
         if len(args) == 1 and args[0] == "help" and "help" not in self.names:

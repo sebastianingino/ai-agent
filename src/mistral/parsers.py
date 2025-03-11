@@ -51,15 +51,8 @@ def import_project(content: content_parser.Content) -> List[Action]:
             return actions
 
     user_content = [{"type": "text", "text": content["content"]}]
-    for test_attachment in content["text_attachments"]:
+    for test_attachment in content["attachments"]:
         user_content.append({"type": "text", "text": test_attachment})
-    for image_attachment in content["image_attachments"]:
-        user_content.append(
-            {
-                "type": "image_url",
-                "image_url": f"data:image/png;base64,{base64.b64encode(image_attachment).decode()}",
-            }
-        )
 
     client = Chat.client
     response = client.chat.parse(

@@ -48,5 +48,6 @@ class ChatModel:
             return str(response.choices[0].message.content)
 
         return ERROR_RESPONSE
-    
+
+
 Chat = ChatModel()

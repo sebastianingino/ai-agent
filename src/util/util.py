@@ -11,6 +11,7 @@ async def preflight_execute(action: Action, ctx: Context) -> str:
     execute = await action.execute(ctx)
     return result_collapse(action.execute_wrap(execute))
 
+
 def result_collapse[T](result: Result[T, T]) -> T:
     if result.is_ok():
         return result.unwrap()

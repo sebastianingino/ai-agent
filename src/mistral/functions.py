@@ -69,3 +69,33 @@ def datetime_to_when(dt: datetime) -> str:
         return response.choices[0].message.parsed.when
 
     raise ValueError("Failed to convert datetime to 'when'")
+
+
+@as_result(Exception)
+def title_document(content: str) -> str:
+    """Title a document"""
+
+    class Title(BaseModel):
+        title: str
+
+    client = Chat.client
+    response = client.chat.parse(
+        model=MISTRAL_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": "Please give the following document a title.",
+            },
+            {"role": "user", "content": content},
+        ],
+        response_format=Title,
+    )
+
+    if (
+        response.choices
+        and response.choices[0].message
+        and response.choices[0].message.parsed
+    ):
+        return response.choices[0].message.parsed.title
+
+    raise ValueError("Failed to title document")

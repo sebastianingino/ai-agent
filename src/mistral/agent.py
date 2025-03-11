@@ -1,10 +1,9 @@
 import json
 import logging
 import os
-from re import S
 import discord
 from typing import List, Optional, Type
-from mistralai import Mistral, SystemMessage, ToolMessage, UserMessage
+from mistralai import Mistral, SystemMessage, UserMessage
 from datetime import datetime
 from pydantic import BaseModel
 from actions.action import Action, apply_multiple
@@ -25,11 +24,13 @@ SYSTEM_PROMPT = """You are a helpful and friendly project manager assistant. You
 You have access to all the information about the user and their projects. You can also perform actions on the user's behalf.
 You can create, update, and delete tasks and projects. You can also mark tasks as completed or not completed. You can also leave a shared project and set a project as default.
 You can also set deadlines for tasks and projects. You can't invite or kick people from projects, but you can tell them to do so if needed using the `!project invite` and `!project kick` commands.
-Please keep responses relevant to the user's projects and tasks, and avoid discussing unrelated topics. Keep responses short and concise.
+Please keep responses relevant to the user's projects and tasks, and avoid discussing unrelated topics. Keep responses polite, short, and concise.
 If you don't know the answer, say "I don't know" or "I can't help with that".
 You can also ask the user for more information if needed.
 Please use relative dates when possible, e.g. "tomorrow", "this Thursday", "next week", etc. If something is further away, use absolute dates and times. You may omit the time if it's not relevant.
+You are provided the context of the conversation, including the user's messages and the bot's responses. Each message is timestamped in ISO format. 
 """
+OTHER_USERS_MESSAGE = "Some of the messages in the context are from other users and are marked as such. Please note that the current user may or may not be able to see the projects and tasks of other users."
 ERROR_RESPONSE = "Looks like something went wrong. Please try again later."
 ACTIONS: List[Type[Action]] = [
     ProjectNew,
@@ -108,8 +109,10 @@ class AgentModel:
     async def handle(
         self, message: discord.Message, context: List[discord.Message]
     ) -> Optional[str]:
-        prompt = await context_to_prompt(context)
+        prompt, other_users = context_to_prompt(context, message.author)
         prompt.append(SystemMessage(content=SYSTEM_PROMPT))
+        if other_users:
+            prompt.append(SystemMessage(content=OTHER_USERS_MESSAGE))
 
         user = await User.find_one(
             User.discord_id == message.author.id, fetch_links=True

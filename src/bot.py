@@ -1,10 +1,11 @@
 import asyncio
-from collections import defaultdict
 import os
-import coloredlogs
+import coloredlogs  # type: ignore
 import discord
 import logging
-
+from collections import defaultdict
+from typing import DefaultDict, List
+from beanie import PydanticObjectId
 from discord.ext import commands
 from database.database import init_database
 from model import Models
@@ -17,6 +18,16 @@ from commands.register import register
 from util import messages
 from discord.ext import tasks
 from datetime import datetime, time, timedelta
+
+# Sentry for error tracking
+import sentry_sdk
+from sentry_sdk.integrations.logging import LoggingIntegration
+
+sentry_sdk.init(
+    dsn="https://eb37c6a6f385fc23e9b3f55308e4af7e@o4507331026747392.ingest.us.sentry.io/4508957002956800",
+    send_default_pii=True,
+    integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)],
+)
 
 PREFIX = "!"
 
@@ -126,9 +137,8 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     await Reactions.handle(reaction, message, user)
 
 
-
 @tasks.loop(time=time(hour=8))
-async def check_due_tasks():
+async def check_due_tasks() -> None:
     # Get today's date
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
@@ -152,14 +162,14 @@ async def check_due_tasks():
                 LOGGER.warning(f"Discord user not found for user ID {user.discord_id}")
                 continue
 
+            if not task.deadline:
+                continue
+
             # Send reminder as DM
             try:
                 channel = await discord_user.create_dm()
                 await channel.send(
                     f"⏰ Task due today: **{task.name}**\nDeadline: {task.deadline.strftime('%Y-%m-%d %H:%M')}"
-                )
-                LOGGER.info(
-                    f"Sent reminder for task {task.id} to user {discord_user.name}"
                 )
             except Exception as e:
                 LOGGER.error(f"Failed to send reminder for task {task.id}: {e}")
@@ -167,15 +177,18 @@ async def check_due_tasks():
         LOGGER.error(f"Error in check_due_tasks: {e}")
 
 
-@tasks.loop(time=time(5, 0))
-async def daily_task_report():
+@tasks.loop(time=time(hour=17))
+async def daily_task_report() -> None:
     channel = bot.get_channel(1337208671339282433)
+    if not (
+        isinstance(channel, discord.TextChannel)
+        or isinstance(channel, discord.DMChannel)
+    ):
+        LOGGER.error("Channel not found.")
+        return
 
-    task_counts = defaultdict(int)
+    task_counts: DefaultDict[PydanticObjectId, int] = defaultdict(int)
     all_tasks = await Task.find({"completed": True}).to_list()
-    LOGGER.info(
-        all_tasks
-    )
     now = datetime.now()
 
     for task in all_tasks:
@@ -189,20 +202,26 @@ async def daily_task_report():
     max_completed = max(task_counts.values())
     top_users = [user for user, count in task_counts.items() if count == max_completed]
 
-    top_usernames = []
+    top_usernames: List[discord.User] = []
     for person in top_users:
         user = await User.find_one({"_id": person})
-        if not user:
-            LOGGER.error(f"No user found with this ID.")
-        name = await bot.fetch_user(user.discord_id)
-        top_usernames.append(name.name)
+        if user:
+            discord_user = await bot.fetch_user(user.discord_id)
+            top_usernames.append(discord_user)
+        else:
+            LOGGER.error("No user found with this ID.")
 
     if len(top_users) == 1:
         winner = top_usernames[0]
-        await channel.send(f"Congrats {winner}! You completed the most tasks today with {max_completed} tasks. Thanks for your hard work! 🎉")
+        await channel.send(
+            f"Congrats {winner.mention}! You completed the most tasks today with {max_completed} tasks. Thanks for your hard work! 🎉",
+        )
     else:
-        user_list = ", ".join(top_usernames)
-        await channel.send(f"Productive day! {user_list} all completed {max_completed} tasks each! Keep it up! 💪")
+        user_list = f"{', '.join([user.mention for user in top_usernames[:-1]])}, and {top_usernames[-1].mention}"
+        await channel.send(
+            f"Productive day! {user_list} all completed {max_completed} tasks each! Keep it up! 💪"
+        )
+
 
 # Register commands
 register(bot)
@@ -245,6 +264,8 @@ async def duetoday(ctx):
 
         response = "Tasks due today:\n"
         for task in due_tasks:
+            if not task.deadline:
+                continue
             time_str = task.deadline.strftime("%H:%M")
             response += f"• {task.name} - Due at {time_str}\n"
 

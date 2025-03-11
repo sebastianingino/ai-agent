@@ -6,8 +6,8 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "audioop-lts>=0.2.1",
-    "discord-py>=2.4.0",
-    "mistralai>=1.4.0",
+    "discord-py>=2.5.2",
+    "mistralai>=1.5.1",
     "python-dotenv>=1.0.1",
     "textual>=2.1.2",
     "beanie>=1.29.0",
@@ -17,6 +17,7 @@ dependencies = [
     "pypdf>=5.3.1",
     "validators>=0.34.0",
     "markdownify>=1.1.0",
+    "sentry-sdk>=2.22.0",
 ]
 
 [tool.setuptools]

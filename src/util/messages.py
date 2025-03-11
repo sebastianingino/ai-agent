@@ -1,8 +1,8 @@
-from typing import List, Union
+from typing import List, Tuple, Union
 import discord
 from mistralai import AssistantMessage, SystemMessage, ToolMessage, UserMessage
 
-CONTEXT_LIMIT = 10
+CONTEXT_LIMIT = 20
 RESET_POINT = "Bot state reset."
 
 Prompt = List[Union[SystemMessage, ToolMessage, UserMessage, AssistantMessage]]
@@ -35,17 +35,35 @@ async def context(message: discord.Message):
     return stack[::-1]
 
 
-async def context_to_prompt(context: List[discord.Message]) -> Prompt:
+def context_to_prompt(
+    context: List[discord.Message], user: Union[discord.User, discord.Member]
+) -> Tuple[Prompt, bool]:
     """
     Convert a message context to a prompt.
     """
     prompt: Prompt = []
+    other_users = False
     for message in context:
         if message.author.bot:
-            prompt.append(AssistantMessage(content=message.content))
+            prompt.append(
+                AssistantMessage(
+                    content=f"({message.created_at.isoformat()}) {message.content}"
+                )
+            )
+        elif message.author == user:
+            prompt.append(
+                UserMessage(
+                    content=f"({message.created_at.isoformat()}) {message.content}"
+                )
+            )
         else:
-            prompt.append(UserMessage(content=message.content))
-    return prompt
+            prompt.append(
+                UserMessage(
+                    content=f"({message.created_at.isoformat()}, other user) {message.content}"
+                )
+            )
+            other_users = True
+    return prompt, other_users
 
 
 async def bot_included(context: List[discord.Message]) -> bool:

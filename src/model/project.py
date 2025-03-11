@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 from beanie import Document, Link, PydanticObjectId
+from model.document import EmbeddedDocument
 from model.task import Task
 
 
@@ -13,7 +14,7 @@ class Project(Document):
     admins: List[PydanticObjectId] = []
 
     tasks: List[Link[Task]] = []
-    objects: List[str] = []
+    documents: List[EmbeddedDocument] = []
 
     deadline: Optional[datetime] = None
 
