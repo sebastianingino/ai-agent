@@ -81,6 +81,15 @@ class Command:
         self.names.add(subcommand.name)
 
     def helptext(self):
+        if len(self.subcommands) == 0:
+            return f"""
+## {self.name}: {self.help}
+**Usage:**
+```
+!{self.name.lower()} [args...]
+```
+        """.strip()
+
         return f"""
 ## {self.name}: {self.help}
 
