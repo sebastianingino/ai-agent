@@ -8,7 +8,12 @@ from mistralai import Mistral, SystemMessage, UserMessage
 from datetime import datetime
 from pydantic import BaseModel
 from actions.action import Action, apply_multiple
-from actions.document import DocumentAdd, DocumentRemove, DocumentSearch
+from actions.document import (
+    DocumentAdd,
+    DocumentRemove,
+    DocumentSearch,
+    DocumentSearchAll,
+)
 from actions.project import (
     ProjectDeadline,
     ProjectDelete,
@@ -27,7 +32,7 @@ You have access to all the information about the user and their projects. You ca
 You can create, update, and delete tasks and projects. You can also mark tasks as completed or not completed. You can also leave a shared project and set a project as default.
 You can also set deadlines for tasks and projects. You can't invite or kick people from projects, but you can tell them to do so if needed using the `!project invite` and `!project kick` commands.
 Please keep responses relevant to the user's projects and tasks, and avoid discussing unrelated topics. Keep responses polite, short, and concise. You should still be friendly and helpful.
-If you don't know the answer, say "I don't know" or "I can't help with that". If no answer exists when looking up documents, tell the user that you couldn't find any relevant information.
+If you don't know the answer, say "I don't know" or "I can't help with that". If no answer exists when looking up documents, tell the user that you couldn't find any relevant information. If you do find relevant information in one or many documents, please cite which document titles you found the information in.
 You can also ask the user for more information if needed.
 Please use relative dates when possible, e.g. "tomorrow", "this Thursday", "next week", etc. If something is further away, use absolute dates and times. You may omit the time if it's not relevant.
 You are provided the context of the conversation, including the user's messages and the bot's responses. Each message contains the timestamp in ISO format at the beginning. You should not include a message timestamp in your response.
@@ -48,6 +53,7 @@ ACTIONS: List[Type[Action]] = [
     DocumentAdd,
     DocumentRemove,
     DocumentSearch,
+    DocumentSearchAll,
 ]
 TOOLS = [action.tool_schema() for action in ACTIONS]
 TOOL_NAMES = {action.__name__: action for action in ACTIONS}
