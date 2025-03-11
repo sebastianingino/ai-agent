@@ -23,15 +23,17 @@ from datetime import datetime, time, timedelta
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 
+environment = os.getenv("ENV")
+
 sentry_sdk.init(
     dsn="https://eb37c6a6f385fc23e9b3f55308e4af7e@o4507331026747392.ingest.us.sentry.io/4508957002956800",
     send_default_pii=True,
     integrations=[LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)],
-    environment=os.getenv("ENV") or "local",
+    environment=environment or "local",
 )
 
 # Google Cloud Logging
-if os.getenv("ENV") == "production":
+if environment == "production":
     import google.cloud.logging as cloud_logging
 
     client = cloud_logging.Client()
@@ -69,7 +71,6 @@ class Bot(commands.Bot):
 
 
 bot: Bot
-environment = os.getenv("ENV")
 if environment == "development":
     from test.mockbot import MockBot
 
