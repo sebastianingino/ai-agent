@@ -38,12 +38,13 @@ if environment == "production":
 
     client = cloud_logging.Client()
     client.setup_logging()
+else:
+    coloredlogs.install(level="DEBUG", fmt="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 PREFIX = "!"
 
 # Setup logging
 LOGGER = logging.getLogger("discoin")
-coloredlogs.install(level="DEBUG", fmt="%(asctime)s %(name)s %(levelname)s %(message)s")
 logging.getLogger("asyncio").setLevel(logging.INFO)
 logging.getLogger("discord").setLevel(logging.INFO)
 logging.getLogger("httpcore").setLevel(logging.INFO)
