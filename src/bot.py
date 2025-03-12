@@ -39,7 +39,9 @@ if environment == "production":
     client = cloud_logging.Client()
     client.setup_logging()
 else:
-    coloredlogs.install(level="DEBUG", fmt="%(asctime)s %(name)s %(levelname)s %(message)s")
+    coloredlogs.install(
+        level="DEBUG", fmt="%(asctime)s %(name)s %(levelname)s %(message)s"
+    )
 
 PREFIX = "!"
 
@@ -67,8 +69,9 @@ class Bot(commands.Bot):
                 "Sorry, I don't recognize that command. Try `!help` for a list of commands."
             )
         else:
-            await context.reply(
-                f"Sorry, something went wrong! {exception}", ephemeral=True
+            sentry_sdk.capture_exception(exception)
+            await context.send(
+                "Sorry, an error occurred while processing your command."
             )
 
 

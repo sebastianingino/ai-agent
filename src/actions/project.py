@@ -273,14 +273,12 @@ class ProjectInvite(Action):
     unsafe: ClassVar[bool] = False
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
-        project = await Project.find_one(
-            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id, fetch_links=True
-        )
-        if not project:
-            return Err(None)
-        self._memo["project"] = project
-        return Ok(None)
-
+        for project in ctx.user.projects:
+            if project.name.lower() == self.name.lower(): # type: ignore
+                self._memo["project"] = project
+                return Ok(None)
+        return Err(None)
+        
     def preflight_wrap(self, result: Result[None, None]) -> Result[None, str]:
         if result.is_err():
             return Err(f"Project {self.name} not found.")
@@ -328,13 +326,11 @@ class ProjectKick(Action):
     unsafe: ClassVar[bool] = False
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
-        project = await Project.find_one(
-            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id, fetch_links=True
-        )
-        if not project:
-            return Err(None)
-        self._memo["project"] = project
-        return Ok(None)
+        for project in ctx.user.projects:
+            if project.name.lower() == self.name.lower():  # type: ignore
+                self._memo["project"] = project
+                return Ok(None)
+        return Err(None)
 
     def preflight_wrap(self, result: Result[None, None]) -> Result[None, str]:
         if result.is_err():
