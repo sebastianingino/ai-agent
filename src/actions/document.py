@@ -207,7 +207,7 @@ class DocumentSearch(Action):
         return Ok(json.dumps(result.unwrap(), default=pydantic_encoder))
 
     def __str__(self) -> str:
-        return f"Search for documents in {self.project}"
+        return f"Search for documents in {self.project} with query {self.query}"
 
 
 class DocumentSearchAll(Action):
@@ -243,4 +243,4 @@ class DocumentSearchAll(Action):
         return Ok(json.dumps(result.unwrap(), default=pydantic_encoder))
 
     def __str__(self) -> str:
-        return "Search for documents in all projects"
+        return f"Search for documents in all projects with query {self.query}"
