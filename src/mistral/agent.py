@@ -224,6 +224,7 @@ This will execute the following actions:
                 )
                 return None
 
+            LOGGER.info(f"Executing actions: {', '.join([str(action) for action in actions])}")
             result = await apply_multiple(
                 actions,
                 message.author,
