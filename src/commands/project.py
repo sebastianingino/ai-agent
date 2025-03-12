@@ -214,8 +214,11 @@ This will create a new project with the following actions:
             response += f"\n- {str(action)}{' ❗️' if action.unsafe else ''}"
 
         actions = tasks.unwrap()
+        chunks = messages.chunkify(response)
+        for chunk in chunks[:-1]:
+            await ctx.reply(chunk)
         return await ctx.reply(
-            response,
+            chunks[-1],
             view=binary_response(
                 functools.partial(apply_actions, actions), user=ctx.author
             ),
