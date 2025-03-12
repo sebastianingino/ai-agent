@@ -3,6 +3,7 @@ import logging
 from typing import List
 
 import discord
+import validators
 
 from actions.action import Action, apply_multiple
 from actions.document import DocumentAdd, DocumentList, DocumentRemove, DocumentSearch
@@ -248,6 +249,8 @@ async def project_document_add(ctx: CommandContext, *args: str):
         )
 
     urls = [url] if len(url) > 0 else []
+    if len(urls) > 0 and not validators.url(urls[0]):
+        return await ctx.reply("Sorry, that doesn't look like a valid URL.")
     for attachment in ctx.message.attachments:
         urls.append(attachment.url)
 

@@ -2,7 +2,6 @@ import json
 import logging
 from typing import ClassVar, List, Optional
 from result import Err, Ok, Result
-import validators
 from actions.action import Action, Context
 from mistral import functions
 from mistral import rag
@@ -25,10 +24,6 @@ class DocumentAdd(Action):
     unsafe: ClassVar[bool] = False
 
     async def preflight(self, ctx: Context) -> Result[None, str]:
-        for url in self.urls:
-            if not validators.url(url):
-                LOGGER.warning(f"Invalid URL: {url}")
-                return Err(f"Invalid URL: {url}")
         if self.project:
             for project in ctx.user.projects:
                 if project.name == self.project:  # type: ignore
