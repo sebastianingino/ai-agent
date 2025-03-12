@@ -246,7 +246,8 @@ class ProjectDelete(Action):
             await document.delete()
         if ctx.user.default_project == project:
             ctx.user.default_project = None
-        ctx.user.projects.remove(project)
+        if project in ctx.user.projects:
+            ctx.user.projects.remove(project)
         await ctx.user.save()
         await project.delete()
         return Ok(None)
