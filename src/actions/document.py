@@ -92,7 +92,7 @@ class DocumentRemove(Action):
                     project = p  # type: ignore
                     break
         elif ctx.user.default_project is not None:
-            p = ctx.user.default_project
+            project = ctx.user.default_project
         if project is None:
             return Err("Project not found")
         self._memo["project"] = project
