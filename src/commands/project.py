@@ -200,29 +200,29 @@ async def project_import(ctx: CommandContext, *args: str):
         content = content_result.unwrap()
         async with ctx.message.channel.typing():
             tasks = parsers.import_project(content)
-        if tasks.is_err():
+            if tasks.is_err():
+                return await ctx.reply(
+                    "Looks like there was an error importing the project. Please try again."
+                )
+
+            response = """
+    Are you sure you want to import this project?
+    This will create a new project with the following actions:
+            """.strip()
+
+            for action in tasks.unwrap():
+                response += f"\n- {str(action)}{' ❗️' if action.unsafe else ''}"
+
+            actions = tasks.unwrap()
+            chunks = messages.chunkify(response)
+            for chunk in chunks[:-1]:
+                await ctx.reply(chunk)
             return await ctx.reply(
-                "Looks like there was an error importing the project. Please try again."
+                chunks[-1],
+                view=binary_response(
+                    functools.partial(apply_actions, actions), user=ctx.author
+                ),
             )
-
-        response = """
-Are you sure you want to import this project?
-This will create a new project with the following actions:
-        """.strip()
-
-        for action in tasks.unwrap():
-            response += f"\n- {str(action)}{' ❗️' if action.unsafe else ''}"
-
-        actions = tasks.unwrap()
-        chunks = messages.chunkify(response)
-        for chunk in chunks[:-1]:
-            await ctx.reply(chunk)
-        return await ctx.reply(
-            chunks[-1],
-            view=binary_response(
-                functools.partial(apply_actions, actions), user=ctx.author
-            ),
-        )
 
 
 @command("doc", "Manage your project's documents", parent=project_entry)
