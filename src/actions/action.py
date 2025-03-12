@@ -95,13 +95,14 @@ async def apply_multiple(
     actions: List[Action],
     user: Union[discord.User, discord.Member],
     client: discord.Client,
-) -> Result[None, str]:
+) -> Result[List[str], str]:
     user_model = await User.find_one(User.discord_id == user.id, fetch_links=True)
     if user_model is None:
         user_model = User(discord_id=user.id)
         await user_model.insert()
 
     context = ActionContext(user=user_model, bot=client)
+    results = []
     for action in actions:
         preflight = await action.preflight(context)
         if preflight.is_err():
@@ -111,4 +112,6 @@ async def apply_multiple(
         result = await action.execute(context)
         if result.is_err():
             return Err(f"Failed execution on step {str(action)}: {action.execute_wrap(result).unwrap_err()}")
-    return Ok(None)
+        
+        results.append(action.execute_wrap(result).unwrap())
+    return Ok(results)

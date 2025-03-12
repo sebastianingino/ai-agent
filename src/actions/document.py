@@ -12,6 +12,7 @@ from pydantic.json import pydantic_encoder
 
 LOGGER = logging.getLogger(__name__)
 
+
 class DocumentAdd(Action):
     """
     Add a document to the project.
@@ -87,7 +88,7 @@ class DocumentRemove(Action):
                     project = p  # type: ignore
                     break
         elif ctx.user.default_project is not None:
-            project = ctx.user.default_project
+            project = ctx.user.default_project  # type: ignore
         if project is None:
             return Err("Project not found")
         self._memo["project"] = project

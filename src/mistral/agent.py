@@ -185,7 +185,10 @@ class AgentModel:
                             f"Error executing actions: {result.unwrap_err()}"
                         )
                     prompt.append(
-                        SystemMessage(content="Actions executed successfully")
+                        SystemMessage(
+                            content="Actions executed successfully. Results:\n"
+                            + "\n".join(result.unwrap())
+                        )
                     )
                     response = await self.client.chat.complete_async(
                         model=MISTRAL_MODEL,
@@ -226,7 +229,9 @@ This will execute the following actions:
                 )
                 return None
 
-            LOGGER.info(f"Executing actions: {', '.join([str(action) for action in actions])}")
+            LOGGER.info(
+                f"Executing actions: {', '.join([str(action) for action in actions])}"
+            )
             result = await apply_multiple(
                 actions,
                 message.author,
@@ -234,7 +239,12 @@ This will execute the following actions:
             )
             if result.is_err():
                 return f"Error executing actions: {result.unwrap_err()}"
-            prompt.append(SystemMessage(content="Actions executed successfully"))
+            prompt.append(
+                SystemMessage(
+                    content="Actions executed successfully. Results:\n"
+                    + "\n".join(result.unwrap())
+                )
+            )
             response = await self.client.chat.complete_async(
                 model=MISTRAL_MODEL,
                 messages=prompt,
