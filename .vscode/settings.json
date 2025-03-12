@@ -4,6 +4,7 @@
         "chunkify",
         "discoin",
         "dotenv",
+        "duetoday",
         "Embedder",
         "levelname",
         "markdownify",

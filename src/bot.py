@@ -153,10 +153,12 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     await Reactions.handle(reaction, message, user)
 
 
-@tasks.loop(time=time(hour=8))
+@tasks.loop(minutes=1)
 async def check_due_tasks() -> None:
+    LOGGER.info("Checking for due tasks...")
+
     # Get today's date
-    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.now()
     tomorrow = today + timedelta(days=1)
 
     try:
@@ -184,6 +186,7 @@ async def check_due_tasks() -> None:
             # Send reminder as DM
             try:
                 channel = await discord_user.create_dm()
+                LOGGER.info(f"Sending daily reminder to {discord_user.name}")
                 await channel.send(
                     f"⏰ Task due today: **{task.name}**\nDeadline: {task.deadline.strftime('%Y-%m-%d %H:%M')}"
                 )
@@ -195,6 +198,8 @@ async def check_due_tasks() -> None:
 
 @tasks.loop(time=time(hour=17))
 async def daily_task_report() -> None:
+    LOGGER.info("Sending daily task report...")
+    # Get the channel to send the report to
     channel = bot.get_channel(1337208671339282433)
     if not (
         isinstance(channel, discord.TextChannel)
@@ -208,7 +213,7 @@ async def daily_task_report() -> None:
     now = datetime.now()
 
     for task in all_tasks:
-        if task.completed_date and task.completed_date.date() == now.date():
+        if task.completed_date and task.completed_date - now < timedelta(days=1):
             task_counts[task.owner] += 1
 
     if not task_counts:
