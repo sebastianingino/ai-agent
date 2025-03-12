@@ -59,6 +59,9 @@ load_dotenv()
 # The message content and members intent must be enabled in the Discord Developer Portal for the bot to work.
 intents = discord.Intents.all()
 
+TIMEZONE_OFFSET = -7  # UTC-7 for PDT
+MORNING_TIME = time(hour=(9 - TIMEZONE_OFFSET) % 24)
+EVENING_TIME = time(hour=(17 - TIMEZONE_OFFSET) % 24)
 
 class Bot(commands.Bot):
     async def on_command_error(
@@ -153,7 +156,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     await Reactions.handle(reaction, message, user)
 
 
-@tasks.loop(time=time(hour=9))
+@tasks.loop(time=MORNING_TIME)
 async def check_due_tasks() -> None:
     LOGGER.info("Checking for due tasks...")
 
@@ -196,7 +199,7 @@ async def check_due_tasks() -> None:
         LOGGER.error(f"Error in check_due_tasks: {e}")
 
 
-@tasks.loop(time=time(hour=17))
+@tasks.loop(time=EVENING_TIME)
 async def daily_task_report() -> None:
     LOGGER.info("Sending daily task report...")
     # Get the channel to send the report to
