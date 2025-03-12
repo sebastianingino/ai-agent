@@ -153,7 +153,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     await Reactions.handle(reaction, message, user)
 
 
-@tasks.loop(minutes=1)
+@tasks.loop(time=time(hour=9))
 async def check_due_tasks() -> None:
     LOGGER.info("Checking for due tasks...")
 
