@@ -217,7 +217,7 @@ async def daily_task_report() -> None:
 
     top_usernames: List[discord.User] = []
     for person in top_users:
-        user = await User.find_one({"_id": person})
+        user = await User.find_one({"_id": person}, fetch_links=True)
         if user:
             discord_user = await bot.fetch_user(user.discord_id)
             top_usernames.append(discord_user)
@@ -257,7 +257,7 @@ async def duetoday(ctx):
 
     try:
         # Find the user by their discord_id
-        user = await User.find_one({"discord_id": ctx.author.id})
+        user = await User.find_one({"discord_id": ctx.author.id}, fetch_links=True)
         if not user:
             await ctx.reply("You need to be registered first.")
             return

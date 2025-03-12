@@ -110,7 +110,7 @@ class ProjectInfo(Action):
     async def preflight(self, ctx: Context) -> Result[None, None]:
         for project in ctx.user.projects:
             if project.name.lower() == self.name.lower():  # type: ignore
-                owner = await User.find_one(User.id == project.owner)  # type: ignore
+                owner = await User.find_one(User.id == project.owner, fetch_links=True)  # type: ignore
                 if not owner:
                     return Err(None)
                 discord_owner = ctx.bot.get_user(owner.discord_id)
@@ -130,7 +130,7 @@ class ProjectInfo(Action):
         owner = self._memo["owner"]
         members: List[discord.User] = []
         for member in project.members:  # type: ignore
-            user = await User.find_one(User.id == member)
+            user = await User.find_one(User.id == member, fetch_links=True)
             if user and (discord_user := ctx.bot.get_user(user.discord_id)):
                 members.append(discord_user)
 
@@ -221,7 +221,7 @@ class ProjectDelete(Action):
     unsafe: ClassVar[bool] = True
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
-        projects = Project.find(Project.owner == ctx.user.id)
+        projects = Project.find(Project.owner == ctx.user.id, fetch_links=True)
         project = None
         async for p in projects:
             if p.name.lower() == self.name.lower():
@@ -273,7 +273,7 @@ class ProjectInvite(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
         project = await Project.find_one(
-            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id
+            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id, fetch_links=True
         )
         if not project:
             return Err(None)
@@ -289,7 +289,7 @@ class ProjectInvite(Action):
         project = self._memo["project"]
         mentions: List[discord.User] = []
         for user in self.users:
-            user_model = await User.find_one(User.discord_id == user)
+            user_model = await User.find_one(User.discord_id == user, fetch_links=True)
             if not user_model:
                 user_model = User(discord_id=user)
                 await user_model.insert()
@@ -328,7 +328,7 @@ class ProjectKick(Action):
 
     async def preflight(self, ctx: Context) -> Result[None, None]:
         project = await Project.find_one(
-            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id
+            Project.name.lower() == self.name.lower(), Project.owner == ctx.user.id, fetch_links=True
         )
         if not project:
             return Err(None)
@@ -344,7 +344,7 @@ class ProjectKick(Action):
         project = self._memo["project"]
         mentions: List[discord.User] = []
         for user in self.users:
-            user_model = await User.find_one(User.discord_id == user)
+            user_model = await User.find_one(User.discord_id == user, fetch_links=True)
             if not user_model:
                 user_model = User(discord_id=user)
                 await user_model.insert()
