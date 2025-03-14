@@ -216,7 +216,7 @@ async def daily_task_report() -> None:
     now = datetime.now()
 
     for task in all_tasks:
-        if task.completed_date and task.completed_date - now < timedelta(days=1):
+        if task.completed_date and now - task.completed_date < timedelta(days=1):
             task_counts[task.owner] += 1
 
     if not task_counts:
