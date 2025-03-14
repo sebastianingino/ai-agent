@@ -125,6 +125,8 @@ async def query_all_documents(
 ) -> Result[List[QueriedDocument], Exception]:
     if database.rag_collection is None:
         raise ValueError("MongoDB collection not found")
+    if len(projects) == 0:
+        raise ValueError("No projects found")
 
     embedded_query = await generate_embedding(query)
     if embedded_query.is_err():
