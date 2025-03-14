@@ -18,6 +18,8 @@ class Help(commands.HelpCommand):
             f"""
 Welcome to the project manager bot! I can help you manage your projects and settings.
 Use the `help` command to get help with a specific command (e.g. `!help project`).
+In order to take advantage of my full capabilities, I recommend chatting with me in 
+a direct message!
 
 **Available commands:**
 {'\n'.join(f"- `{command.name.lower()}`: {command.help}" for command in command_map.values())}
