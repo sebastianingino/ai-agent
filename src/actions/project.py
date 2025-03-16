@@ -118,7 +118,8 @@ class ProjectInfo(Action):
                     return Err(None)
                 self._memo["project"] = project
                 self._memo["owner"] = discord_owner
-        return Ok(None)
+                return Ok(None)
+        return Err(None)
 
     def preflight_wrap(self, result: Result[None, None]) -> Result[None, str]:
         if result.is_err():
