@@ -205,7 +205,7 @@ class DocumentSearch(Action):
     ) -> Result[str, str]:
         if result.is_err():
             return Err(f"Error searching documents: {result.unwrap_err()}")
-        return Ok(json.dumps(result.unwrap(), default=pydantic_encoder))
+        return Ok(f"[{",".join(model.model_dump_json() for model in result.unwrap())}]")
 
     def __str__(self) -> str:
         return f"Search for documents in {self.project} with query {self.query}"
