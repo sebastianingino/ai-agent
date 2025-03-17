@@ -153,7 +153,7 @@ class AgentModel:
         )
         prompt.append(
             SystemMessage(
-                content=f"The current datetime is {datetime.now().isoformat()} in UTC. The user is in PDT."
+                content=f"The current datetime is {datetime.now().isoformat()} in UTC. The user is in PDT (UTC-7)."
             )
         )
 
